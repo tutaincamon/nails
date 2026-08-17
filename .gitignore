@@ -1,0 +1,17 @@
+node_modules/
+.next/
+out/
+build/
+
+# Datos del negocio: reservas reales y emails. Nunca al repositorio.
+data/
+
+.env
+.env.local
+.env*.local
+
+*.tsbuildinfo
+next-env.d.ts
+
+.DS_Store
+.vercel

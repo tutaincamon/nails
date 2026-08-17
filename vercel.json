@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/cron/reminders",
+      "comment": "Recordatorios del dia antes. La hora va en UTC: 08:00 UTC son las 10:00 en Madrid (horario de verano).",
+      "schedule": "0 8 * * *"
+    }
+  ]
+}

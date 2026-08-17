@@ -81,12 +81,27 @@ export default async function HomePage() {
 
         <div className="relative">
           <div className="absolute inset-0 -z-10 rounded-[3rem] bg-gradient-to-br from-accent/25 via-transparent to-primary/10 blur-2xl" />
-          <div className="card overflow-hidden p-6 shadow-sm sm:p-10">
-            <NailFan className="w-full" />
-            <p className="mt-2 text-center text-[13px] italic text-muted">
-              Acrílicas, semipermanente y retiradas cuidadas
-            </p>
-          </div>
+          {siteConfig.gallery.length > 0 ? (
+            <div className="card relative aspect-[4/5] overflow-hidden shadow-sm sm:aspect-[5/6]">
+              <Image
+                src={siteConfig.gallery[0].src}
+                alt={siteConfig.gallery[0].alt}
+                fill
+                // Es la imagen grande de la portada: se carga con prioridad
+                // para que no aparezca en blanco al abrir la web.
+                priority
+                sizes="(max-width: 1024px) 100vw, 45vw"
+                className="object-cover"
+              />
+            </div>
+          ) : (
+            <div className="card overflow-hidden p-6 shadow-sm sm:p-10">
+              <NailFan className="w-full" />
+              <p className="mt-2 text-center text-[13px] italic text-muted">
+                Acrílicas, semipermanente y retiradas cuidadas
+              </p>
+            </div>
+          )}
         </div>
       </section>
 

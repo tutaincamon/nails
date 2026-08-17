@@ -82,7 +82,20 @@ export const siteConfig = {
   /*  ejemplo en SVG para que no se vea un hueco.                           */
   /*  Deja los archivos en public/galeria/ y añádelos aquí.                 */
   /* ---------------------------------------------------------------------- */
-  gallery: [] as { src: string; alt: string }[],
+  gallery: [
+    {
+      src: "/galeria/margaritas-abejas.jpg",
+      alt: "Manicura almendrada en nude mate con margaritas blancas y abejas pintadas a mano",
+    },
+    {
+      src: "/galeria/verano-colores.jpg",
+      alt: "Uñas de verano en amarillo, azul y rosa con estrellas, rayas, lunares y peces",
+    },
+    {
+      src: "/galeria/margaritas-detalle.jpg",
+      alt: "Detalle de dos uñas nude con margaritas y una abeja en relieve",
+    },
+  ] as { src: string; alt: string }[],
 
   /* ---------------------------------------------------------------------- */
   /*  2. IDENTIDAD VISUAL                                                   */

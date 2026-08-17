@@ -23,7 +23,15 @@ const GALLERY: Finish[] = [
 
 export default async function HomePage() {
   // Duración media para sugerir los próximos huecos reales de la agenda.
-  const upcoming = await nextAvailableDays(90, 3);
+  // Si la base de datos aún no está configurada (por ejemplo en el primer
+  // despliegue), la portada se muestra igual: solo se omite esta línea.
+  let upcoming: Awaited<ReturnType<typeof nextAvailableDays>> = [];
+  try {
+    upcoming = await nextAvailableDays(90, 3);
+  } catch (error) {
+    console.error("[portada] No se pudo consultar la agenda:", error);
+  }
+
   const hours = formatDayHours();
 
   return (

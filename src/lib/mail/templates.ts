@@ -3,6 +3,7 @@ import type { BookingRow } from "@/lib/db";
 import { formatCents } from "@/lib/money";
 import { formatDateLong, formatDuration } from "@/lib/time";
 import { ownerEmail } from "@/lib/business";
+import { contactSentence } from "@/lib/business";
 
 /*
  * Plantillas de email en HTML con estilos en línea y tablas: es la única forma
@@ -59,9 +60,9 @@ function shell(opts: {
       <tr><td style="padding:20px 32px;background:${theme.bg};border-top:1px solid ${theme.border};">
         <p style="margin:0 0 6px;font-size:13px;line-height:1.6;color:${theme.muted};">
           ${escapeHtml(business.name)} · ${escapeHtml(business.address.area)}<br>
-          ${escapeHtml(business.phone)} · <a href="mailto:${escapeHtml(ownerEmail())}" style="color:${theme.primary};text-decoration:none;">${escapeHtml(ownerEmail())}</a>
+          ${business.phone ? escapeHtml(business.phone) + " · " : ""}<a href="mailto:${escapeHtml(ownerEmail())}" style="color:${theme.primary};text-decoration:none;">${escapeHtml(ownerEmail())}</a>
         </p>
-        <p style="margin:0;font-size:12px;color:${theme.muted};">Instagram: @${escapeHtml(business.instagram)}</p>
+        ${business.instagram ? `<p style="margin:0;font-size:12px;color:${theme.muted};">Instagram: @${escapeHtml(business.instagram)}</p>` : ""}
       </td></tr>
     </table>
   </td></tr>
@@ -129,7 +130,7 @@ export function clientConfirmation(booking: BookingRow, manageUrl: string) {
     ${button(manageUrl, "Ver o cancelar mi cita")}
     <p style="margin:16px 0 0;font-size:13px;line-height:1.6;color:${theme.muted};">
       Puedes cancelar sin coste hasta ${siteConfig.booking.cancellationHours} h antes desde ese enlace.
-      Si necesitas cambiar la hora o tienes dudas del diseño, escríbeme por WhatsApp al ${escapeHtml(business.phone)}.
+      Si necesitas cambiar la hora o tienes dudas del diseño, ${escapeHtml(contactSentence())}.
     </p>
     <p style="margin:20px 0 0;font-size:14px;line-height:1.7;color:${theme.ink};">
       <strong>Antes de venir:</strong><br>
@@ -231,7 +232,7 @@ export function clientReminder(booking: BookingRow, manageUrl: string) {
     </p>
     ${button(manageUrl, "Ver mi cita")}
     <p style="margin:12px 0 0;font-size:13px;line-height:1.6;color:${theme.muted};">
-      Si no puedes venir, avísame cuanto antes por WhatsApp (${escapeHtml(business.phone)}) para poder dar el hueco a otra persona.
+      Si no puedes venir, avisa cuanto antes (${escapeHtml(contactSentence())}) para poder dar el hueco a otra persona.
     </p>`;
 
   return {

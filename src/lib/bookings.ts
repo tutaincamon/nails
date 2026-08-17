@@ -27,6 +27,7 @@ import {
 import { sendAll, type Mail } from "@/lib/mail/send";
 import { adminUrl, manageUrl, payUrl } from "@/lib/urls";
 import { ownerEmail } from "@/lib/business";
+import { contactSentence } from "@/lib/business";
 
 export type PaymentChoice = "deposit" | "on_site";
 
@@ -204,7 +205,7 @@ export async function cancelBooking(code: string, token: string) {
   if (remaining < siteConfig.booking.cancellationHours) {
     return {
       ok: false as const,
-      error: `Ya no se puede cancelar online (quedan menos de ${siteConfig.booking.cancellationHours} h). Escríbeme por WhatsApp al ${siteConfig.business.phone} y lo vemos.`,
+      error: `Ya no se puede cancelar online (quedan menos de ${siteConfig.booking.cancellationHours} h). Para anularla, ${contactSentence()}.`,
     };
   }
 

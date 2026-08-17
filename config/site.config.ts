@@ -48,28 +48,41 @@ export const siteConfig = {
   /*  1. DATOS DEL NEGOCIO                                                  */
   /* ---------------------------------------------------------------------- */
   business: {
-    name: "Estudio Aura",
+    name: "Appflu",
     /** Aparece en el <title> y en la cabecera */
-    shortName: "Aura",
+    shortName: "Appflu",
     tagline: "Uñas hechas a mano, sin prisa",
     intro:
       "Estudio pequeño y tranquilo donde cada cita es individual. Sin salas llenas, sin esperas: solo tus uñas y el tiempo que necesitan.",
-    ownerName: "Ale",
-    /** Email de la profesional: recibe aviso de cada reserva nueva */
-    ownerEmail: "profesional@ejemplo.com",
-    phone: "+34 600 00 00 00",
+    /*
+     * Los campos de contacto son opcionales: si se dejan vacíos, la web oculta
+     * sola el botón o el dato correspondiente. Así se puede publicar sin datos
+     * personales y rellenarlos más adelante.
+     */
+    ownerName: "",
+    /** Email que recibe el aviso de cada reserva. Se sobrescribe con OWNER_EMAIL. */
+    ownerEmail: "",
+    phone: "",
     /** Solo dígitos con prefijo internacional, para el enlace de WhatsApp */
-    whatsapp: "34600000000",
-    instagram: "estudio.aura",
+    whatsapp: "",
+    instagram: "",
     address: {
-      area: "Barrio de Salamanca, Madrid",
+      area: "Cita previa",
       /** La dirección exacta se envía al confirmar (habitual en negocios en casa) */
-      note: "Estudio en domicilio particular. Te envío la dirección exacta y el portal por email al confirmar la cita.",
+      note: "Te envío la dirección exacta por email al confirmar la cita.",
     },
     timezone: "Europe/Madrid",
     locale: "es-ES",
     currency: "EUR",
   },
+
+  /* ---------------------------------------------------------------------- */
+  /*  GALERÍA                                                               */
+  /*  Fotos de trabajos reales. Si está vacía, la web dibuja unas uñas de   */
+  /*  ejemplo en SVG para que no se vea un hueco.                           */
+  /*  Deja los archivos en public/galeria/ y añádelos aquí.                 */
+  /* ---------------------------------------------------------------------- */
+  gallery: [] as { src: string; alt: string }[],
 
   /* ---------------------------------------------------------------------- */
   /*  2. IDENTIDAD VISUAL                                                   */
@@ -339,30 +352,19 @@ export const siteConfig = {
       },
     ],
     about: {
-      title: "Sobre mí",
+      title: "Cómo trabajo",
       body: [
-        "Trabajo sola, con cita individual, en un estudio en casa. Eso significa que no hay prisa: puedo dedicarle a cada mano el tiempo que necesita y hablar contigo del diseño sin reloj de por medio.",
-        "Uso material de marcas profesionales, esterilizo todo el instrumental entre clientas y no trabajo con MMA. Si vienes de otro sitio con acrílico rígido, puedo retirarlo sin dañarte la uña.",
+        "Cita individual y sin prisa. Cada mano lleva el tiempo que necesita, y hay margen para hablar del diseño sin reloj de por medio.",
+        "Material de marcas profesionales, instrumental esterilizado entre clientas y nada de MMA. Si vienes de otro sitio con acrílico rígido, se puede retirar sin dañarte la uña.",
       ],
       badges: ["Producto profesional", "Instrumental esterilizado", "Libre de MMA", "Cita individual"],
     },
-    testimonials: [
-      {
-        name: "Marta G.",
-        text: "Llevo un año yendo y nunca se me ha levantado una. Además el trato es cercanísimo, se te pasa la hora hablando.",
-        service: "Acrílicas + decoración elaborada",
-      },
-      {
-        name: "Lucía R.",
-        text: "Le llevé una foto de Pinterest imposible y salió mejor que la foto. El efecto aura es su especialidad.",
-        service: "Semipermanente + efecto aura",
-      },
-      {
-        name: "Cristina P.",
-        text: "Venía de un centro donde me destrozaron las uñas. Me hizo la retirada con muchísimo cuidado y las recuperé.",
-        service: "Retirada + semipermanente",
-      },
-    ],
+    /*
+     * Opiniones reales de clientas. Vacío a propósito: publicar reseñas
+     * inventadas es engañoso, así que la sección solo aparece cuando hay algo
+     * de verdad que enseñar.
+     */
+    testimonials: [] as { name: string; text: string; service: string }[],
     faq: [
       {
         q: "¿Cuánto dura la cita?",
@@ -370,7 +372,7 @@ export const siteConfig = {
       },
       {
         q: "¿Qué pasa si llego tarde?",
-        a: "Avísame por WhatsApp. Puedo esperar unos 15 minutos, pero si es más tiempo quizá haya que simplificar el diseño o mover la cita, porque después tengo otra clienta.",
+        a: "Avisa cuanto antes. Se puede esperar unos 15 minutos, pero si es más tiempo quizá haya que simplificar el diseño o mover la cita, porque después hay otra clienta.",
       },
       {
         q: "¿Tengo que pagar algo al reservar?",
@@ -382,7 +384,7 @@ export const siteConfig = {
       },
       {
         q: "¿Los precios que ponen «desde» por qué varían?",
-        a: "Porque una decoración puede ser dos uñas con líneas o las diez con relieve y mano alzada. Si me mandas la referencia por Instagram antes de la cita, te digo el precio exacto.",
+        a: "Porque una decoración puede ser dos uñas con líneas o las diez con relieve y mano alzada. Si mandas la referencia antes de la cita, se confirma el precio exacto.",
       },
       {
         q: "¿Hacéis retirada de trabajos de otro sitio?",

@@ -34,14 +34,16 @@ export function Nav() {
         </div>
 
         <div className="flex items-center gap-3">
-          <a
-            href={`https://wa.me/${business.whatsapp}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden text-[14px] text-muted transition-colors hover:text-ink sm:inline"
-          >
-            WhatsApp
-          </a>
+          {business.whatsapp && (
+            <a
+              href={`https://wa.me/${business.whatsapp}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden text-[14px] text-muted transition-colors hover:text-ink sm:inline"
+            >
+              WhatsApp
+            </a>
+          )}
           <Link href="/reservar" className="btn-primary btn-sm">
             Reservar cita
           </Link>

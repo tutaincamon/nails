@@ -8,6 +8,7 @@ import { getBooking } from "@/lib/db";
 import { verifyStripeSession } from "@/lib/payments";
 import { isRealMailConfigured } from "@/lib/mail/send";
 import { formatDateLong, hoursUntil } from "@/lib/time";
+import { contactSentence } from "@/lib/business";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,7 @@ export default async function BookingPage({ params, searchParams }: Props) {
       <Shell title="Enlace no válido">
         <p className="text-[15px] leading-relaxed text-muted">
           Este enlace no corresponde a ninguna cita. Comprueba que lo has copiado completo desde el
-          email de confirmación, o escríbeme por WhatsApp al {siteConfig.business.phone} y lo miro.
+          email de confirmación, o {contactSentence()}.
         </p>
         <Link href="/reservar" className="btn-primary mt-6">
           Reservar una cita
@@ -89,16 +90,22 @@ export default async function BookingPage({ params, searchParams }: Props) {
             {siteConfig.business.address.note}
           </p>
           <p className="mt-3 text-[14px] leading-relaxed text-muted">
-            Si necesitas cambiar la hora, escríbeme por WhatsApp al{" "}
-            <a
-              href={`https://wa.me/${siteConfig.business.whatsapp}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-semibold text-primary hover:underline"
-            >
-              {siteConfig.business.phone}
-            </a>
-            .
+            {siteConfig.business.whatsapp ? (
+              <>
+                Si necesitas cambiar la hora, escríbeme por WhatsApp al{" "}
+                <a
+                  href={`https://wa.me/${siteConfig.business.whatsapp}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-primary hover:underline"
+                >
+                  {siteConfig.business.phone}
+                </a>
+                .
+              </>
+            ) : (
+              <>Si necesitas cambiar la hora, {contactSentence()}.</>
+            )}
           </p>
         </div>
       )}
@@ -111,7 +118,7 @@ export default async function BookingPage({ params, searchParams }: Props) {
         {booking.status !== "cancelled" && !cancellable && !isPast && (
           <p className="text-[13.5px] leading-relaxed text-muted">
             Ya no se puede cancelar online porque quedan menos de{" "}
-            {siteConfig.booking.cancellationHours} h. Si no puedes venir, avísame por WhatsApp cuanto
+            {siteConfig.booking.cancellationHours} h. Si no puedes venir, {contactSentence()} cuanto
             antes y lo solucionamos.
           </p>
         )}

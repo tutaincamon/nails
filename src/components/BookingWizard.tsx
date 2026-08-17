@@ -561,15 +561,21 @@ export function BookingWizard() {
           )}
 
           <p className="mt-5 border-t border-line pt-4 text-[12.5px] leading-relaxed text-muted">
-            ¿Dudas antes de reservar?{" "}
-            <a
-              href={`https://wa.me/${business.whatsapp}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-semibold text-primary hover:underline"
-            >
-              Escríbeme por WhatsApp
-            </a>
+            {business.whatsapp ? (
+              <>
+                ¿Dudas antes de reservar?{" "}
+                <a
+                  href={`https://wa.me/${business.whatsapp}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-primary hover:underline"
+                >
+                  Escríbeme por WhatsApp
+                </a>
+              </>
+            ) : (
+              "¿Alguna duda sobre el diseño? Cuéntamela en la nota del último paso y la vemos antes de la cita."
+            )}
           </p>
         </div>
       </aside>

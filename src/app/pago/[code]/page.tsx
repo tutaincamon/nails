@@ -8,6 +8,7 @@ import { getBooking } from "@/lib/db";
 import { isStripeConfigured } from "@/lib/payments";
 import { formatCents } from "@/lib/money";
 import { formatDateLong } from "@/lib/time";
+import { contactSentence } from "@/lib/business";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,7 @@ export default async function PaymentPage({ params, searchParams }: Props) {
         <h1 className="text-[clamp(1.8rem,5vw,2.5rem)]">Enlace no válido</h1>
         <p className="mt-3 text-[15px] leading-relaxed text-muted">
           Este enlace de pago no corresponde a ninguna reserva. Revisa el email de confirmación o
-          escríbeme al {siteConfig.business.phone}.
+          {contactSentence()}.
         </p>
         <Link href="/reservar" className="btn-primary mt-6">
           Reservar una cita
@@ -77,8 +78,7 @@ export default async function PaymentPage({ params, searchParams }: Props) {
       </div>
 
       <p className="mt-6 text-[13px] leading-relaxed text-muted">
-        {siteConfig.deposit.note} Si prefieres pagarlo todo en el estudio, escríbeme por WhatsApp al{" "}
-        {siteConfig.business.phone} y lo ajusto.
+        {siteConfig.deposit.note} Si prefieres pagarlo todo en el estudio, {contactSentence()}.
       </p>
     </div>
   );

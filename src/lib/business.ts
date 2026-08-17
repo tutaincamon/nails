@@ -11,3 +11,15 @@ import siteConfig from "@config";
 export function ownerEmail(): string {
   return process.env.OWNER_EMAIL || siteConfig.business.ownerEmail;
 }
+
+/**
+ * Cómo puede contactar la clienta, según los canales que estén configurados.
+ * Sin teléfono ni WhatsApp, se le remite al email, que siempre existe porque es
+ * por donde recibe la confirmación.
+ */
+export function contactSentence(): string {
+  const { phone, whatsapp } = siteConfig.business;
+  if (phone && whatsapp) return `escríbeme por WhatsApp al ${phone}`;
+  if (phone) return `llámame al ${phone}`;
+  return "responde a este email y lo vemos";
+}

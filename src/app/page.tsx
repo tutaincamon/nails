@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import siteConfig from "@config";
 import { NailFan, NailSwatch, finishLabel, type Finish } from "@/components/NailArt";
@@ -10,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 const { business, content, booking, deposit } = siteConfig;
 
-const GALLERY: Finish[] = [
+const FINISHES: Finish[] = [
   "aura",
   "cromado",
   "francesa",
@@ -96,8 +97,7 @@ export default async function HomePage() {
           <h2 className="mt-2 text-[clamp(1.9rem,4vw,2.75rem)]">Servicios y precios</h2>
           <p className="mt-3 text-[15px] leading-relaxed text-muted">
             Los precios marcados con «desde» dependen de cuántas uñas se decoren y del detalle del
-            diseño. Si me mandas la referencia por Instagram antes de la cita, te confirmo el precio
-            exacto.
+            diseño. Si mandas la referencia antes de la cita, se confirma el precio exacto.
           </p>
         </header>
         <ServiceMenu />
@@ -155,29 +155,49 @@ export default async function HomePage() {
           </p>
         </header>
 
-        <ul className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          {GALLERY.map((finish) => (
-            <li
-              key={finish}
-              className="card group overflow-hidden p-5 transition-shadow hover:shadow-md"
-            >
-              <NailSwatch
-                finish={finish}
-                className="mx-auto h-32 w-auto transition-transform duration-300 group-hover:-translate-y-1"
-              />
-              <p className="mt-4 text-center text-[13px] font-medium text-ink">
-                {finishLabel(finish)}
-              </p>
-            </li>
-          ))}
-        </ul>
+        {siteConfig.gallery.length > 0 ? (
+          <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+            {siteConfig.gallery.map((photo) => (
+              <li
+                key={photo.src}
+                className="card group relative aspect-[4/5] overflow-hidden transition-shadow hover:shadow-md"
+              >
+                <Image
+                  src={photo.src}
+                  alt={photo.alt}
+                  fill
+                  sizes="(max-width: 640px) 50vw, 33vw"
+                  className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          /* Sin fotos todavía: uñas dibujadas para que la sección no quede vacía. */
+          <ul className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {FINISHES.map((finish) => (
+              <li
+                key={finish}
+                className="card group overflow-hidden p-5 transition-shadow hover:shadow-md"
+              >
+                <NailSwatch
+                  finish={finish}
+                  className="mx-auto h-32 w-auto transition-transform duration-300 group-hover:-translate-y-1"
+                />
+                <p className="mt-4 text-center text-[13px] font-medium text-ink">
+                  {finishLabel(finish)}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       {/* -------------------------------------------------------------- SOBRE */}
       <section className="border-y border-line bg-surface py-14 lg:py-20">
         <div className="section grid gap-10 lg:grid-cols-[1fr_0.85fr] lg:gap-16">
           <div>
-            <p className="eyebrow">{business.ownerName}</p>
+            <p className="eyebrow">{business.ownerName || "El estudio"}</p>
             <h2 className="mt-2 text-[clamp(1.9rem,4vw,2.75rem)]">{content.about.title}</h2>
             {content.about.body.map((paragraph) => (
               <p key={paragraph.slice(0, 24)} className="mt-4 text-[15px] leading-relaxed text-muted">
@@ -220,6 +240,7 @@ export default async function HomePage() {
       </section>
 
       {/* ----------------------------------------------------------- OPINIONES */}
+      {content.testimonials.length > 0 && (
       <section className="section py-14 lg:py-20">
         <header className="mb-8 max-w-2xl">
           <p className="eyebrow">Clientas</p>
@@ -239,6 +260,7 @@ export default async function HomePage() {
           ))}
         </ul>
       </section>
+      )}
 
       {/* --------------------------------------------------------------- DUDAS */}
       <section id="dudas" className="section scroll-mt-24 py-14 lg:py-20">
@@ -247,16 +269,20 @@ export default async function HomePage() {
             <p className="eyebrow">Preguntas</p>
             <h2 className="mt-2 text-[clamp(1.9rem,4vw,2.75rem)]">Dudas frecuentes</h2>
             <p className="mt-3 text-[15px] leading-relaxed text-muted">
-              Si te queda alguna, escríbeme por WhatsApp y te contesto yo misma.
+              {business.whatsapp
+                ? "Si te queda alguna, escríbeme por WhatsApp y te contesto yo misma."
+                : "Si te queda alguna, puedes indicármela en la nota al reservar y la vemos antes de la cita."}
             </p>
-            <a
-              href={`https://wa.me/${business.whatsapp}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-ghost btn-sm mt-5"
-            >
-              Preguntar por WhatsApp
-            </a>
+            {business.whatsapp && (
+              <a
+                href={`https://wa.me/${business.whatsapp}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-ghost btn-sm mt-5"
+              >
+                Preguntar por WhatsApp
+              </a>
+            )}
           </header>
 
           <ul className="divide-y divide-line border-t border-line">

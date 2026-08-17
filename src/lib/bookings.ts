@@ -94,7 +94,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
   const q = quote(input.serviceId, input.addOnIds);
   if (!q) return { ok: false, error: "Ese servicio ya no está disponible.", field: "serviceId" };
 
-  const slotCheck = isSlotBookable(input.date, input.time, q.durationMin);
+  const slotCheck = await isSlotBookable(input.date, input.time, q.durationMin);
   if (!slotCheck.ok) return { ok: false, error: slotCheck.reason, field: "time" };
 
   const wantsDeposit =
@@ -127,8 +127,8 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     manage_token: token,
   };
 
-  insertBooking(row);
-  const booking = getBooking(code);
+  await insertBooking(row);
+  const booking = await getBooking(code);
   if (!booking) return { ok: false, error: "No se pudo guardar la reserva. Inténtalo de nuevo." };
 
   const links = { manage: manageUrl(code, token), pay: payUrl(code, token) };
@@ -173,15 +173,15 @@ export async function notifyConfirmed(booking: BookingRow) {
 /*  Pago de la señal                                                          */
 /* -------------------------------------------------------------------------- */
 export async function confirmDeposit(code: string, paymentRef: string) {
-  const before = getBooking(code);
+  const before = await getBooking(code);
   if (!before) return { ok: false as const, error: "Reserva no encontrada." };
   if (before.deposit_status === "paid") {
     // Idempotente: Stripe puede reintentar el webhook y no queremos duplicar emails.
     return { ok: true as const, booking: before, alreadyPaid: true };
   }
 
-  markDepositPaid(code, paymentRef);
-  const booking = getBooking(code)!;
+  await markDepositPaid(code, paymentRef);
+  const booking = (await getBooking(code))!;
   await notifyConfirmed(booking);
   return { ok: true as const, booking, alreadyPaid: false };
 }
@@ -190,7 +190,7 @@ export async function confirmDeposit(code: string, paymentRef: string) {
 /*  Cancelación                                                               */
 /* -------------------------------------------------------------------------- */
 export async function cancelBooking(code: string, token: string) {
-  const booking = getBooking(code);
+  const booking = await getBooking(code);
   if (!booking) return { ok: false as const, error: "Esa reserva no existe." };
   if (booking.manage_token !== token) {
     return { ok: false as const, error: "El enlace no es válido." };
@@ -207,8 +207,8 @@ export async function cancelBooking(code: string, token: string) {
     };
   }
 
-  updateBookingStatus(code, "cancelled");
-  const cancelled = getBooking(code)!;
+  await updateBookingStatus(code, "cancelled");
+  const cancelled = (await getBooking(code))!;
 
   await sendAll([
     {
@@ -237,7 +237,7 @@ export async function sendRemindersForTomorrow() {
 }
 
 export async function sendRemindersFor(date: string) {
-  const pending = bookingsNeedingReminder(date);
+  const pending = await bookingsNeedingReminder(date);
   const sent: string[] = [];
 
   for (const booking of pending) {
@@ -247,7 +247,7 @@ export async function sendRemindersFor(date: string) {
     ]);
     // Solo se marca si salió bien, para que el siguiente intento lo reintente.
     if (result.ok) {
-      markReminderSent(booking.code);
+      await markReminderSent(booking.code);
       sent.push(booking.code);
     }
   }

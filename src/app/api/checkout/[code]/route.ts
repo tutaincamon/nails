@@ -16,7 +16,7 @@ export async function POST(
   const { code } = await params;
   const token = request.nextUrl.searchParams.get("t") ?? "";
 
-  const booking = getBooking(code);
+  const booking = await getBooking(code);
   if (!booking || booking.manage_token !== token) {
     return NextResponse.json({ ok: false, error: "Enlace no válido." }, { status: 404 });
   }

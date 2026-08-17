@@ -18,11 +18,11 @@ export default async function AdminPage() {
   }
 
   const today = nowInBusinessTz().date;
-  const bookings = allBookings(300);
-  const blocks = blocksBetween(today, addDays(today, siteConfig.booking.maxDaysAhead));
+  const bookings = await allBookings(300);
+  const blocks = await blocksBetween(today, addDays(today, siteConfig.booking.maxDaysAhead));
 
   // El HTML completo de cada email solo se pide al abrirlo, para no cargar de más.
-  const emails = recentEmails(40).map((email) => ({
+  const emails = (await recentEmails(40)).map((email) => ({
     id: email.id,
     created_at: email.created_at,
     to_addr: email.to_addr,

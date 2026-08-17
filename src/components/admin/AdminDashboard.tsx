@@ -171,7 +171,7 @@ function ModeBanner({
 }) {
   const warnings = [
     mailMode === "simulado" &&
-      "Emails en modo simulado: no salen a internet, se leen en la pestaña Emails. Añade RESEND_API_KEY y MAIL_FROM para enviarlos de verdad.",
+      "Emails en modo simulado: no salen a internet, se leen en la pestaña Emails. Para enviarlos de verdad, configura SMTP_HOST y SMTP_USER (lo más rápido) o RESEND_API_KEY con dominio propio.",
     paymentMode === "demo" &&
       "Cobros en modo demostración: no se piden datos de tarjeta. Añade STRIPE_SECRET_KEY para cobrar con Stripe.",
     usingDefaultPassword &&

@@ -22,7 +22,7 @@ export default async function BookingPage({ params, searchParams }: Props) {
   const { code } = await params;
   const { t: token = "", session_id: sessionId } = await searchParams;
 
-  let booking = getBooking(code);
+  let booking = await getBooking(code);
 
   // Enlace privado: sin el token del email no se muestra nada.
   if (!booking || booking.manage_token !== token) {
@@ -44,7 +44,7 @@ export default async function BookingPage({ params, searchParams }: Props) {
     const verified = await verifyStripeSession(sessionId, code);
     if (verified.paid) {
       await confirmDeposit(code, verified.ref!);
-      booking = getBooking(code)!;
+      booking = (await getBooking(code))!;
     }
   }
 

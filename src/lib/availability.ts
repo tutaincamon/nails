@@ -72,18 +72,20 @@ function overlaps(a: Interval, b: Interval): boolean {
  * Calcula la disponibilidad de un rango de días de una vez.
  * Hace una sola consulta a la base de datos para todo el rango.
  */
-export function availabilityRange(
+export async function availabilityRange(
   fromDate: string,
   days: number,
   durationMin: number,
-): DayAvailability[] {
+): Promise<DayAvailability[]> {
   const { slotMinutes, bufferMinutes, minNoticeHours, maxDaysAhead, maxPerDay } =
     siteConfig.booking;
 
   const now = nowInBusinessTz();
   const lastDate = addDays(fromDate, Math.max(0, days - 1));
-  const bookings = bookingsBetween(fromDate, lastDate);
-  const blocks = blocksBetween(fromDate, lastDate);
+  const [bookings, blocks] = await Promise.all([
+    bookingsBetween(fromDate, lastDate),
+    blocksBetween(fromDate, lastDate),
+  ]);
 
   const result: DayAvailability[] = [];
 
@@ -141,20 +143,23 @@ export function availabilityRange(
 }
 
 /** Disponibilidad de un solo día. */
-export function availabilityForDate(date: string, durationMin: number): DayAvailability {
-  return availabilityRange(date, 1, durationMin)[0];
+export async function availabilityForDate(
+  date: string,
+  durationMin: number,
+): Promise<DayAvailability> {
+  return (await availabilityRange(date, 1, durationMin))[0];
 }
 
 /**
  * Comprobación final antes de guardar. El navegador puede enviar una hora que
  * acaba de ocuparse, así que el servidor siempre vuelve a validar aquí.
  */
-export function isSlotBookable(
+export async function isSlotBookable(
   date: string,
   start: string,
   durationMin: number,
-): { ok: true } | { ok: false; reason: string } {
-  const day = availabilityForDate(date, durationMin);
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  const day = await availabilityForDate(date, durationMin);
 
   if (day.closed && day.slots.length === 0) {
     return { ok: false, reason: day.closedReason ?? "Ese día no hay huecos disponibles." };
@@ -173,9 +178,12 @@ export function isSlotBookable(
 }
 
 /** Primeros N días con al menos un hueco libre, para sugerir fechas. */
-export function nextAvailableDays(durationMin: number, count = 3): DayAvailability[] {
+export async function nextAvailableDays(
+  durationMin: number,
+  count = 3,
+): Promise<DayAvailability[]> {
   const { maxDaysAhead } = siteConfig.booking;
   const today = nowInBusinessTz().date;
-  const days = availabilityRange(today, maxDaysAhead + 1, durationMin);
+  const days = await availabilityRange(today, maxDaysAhead + 1, durationMin);
   return days.filter((d) => d.slots.length > 0).slice(0, count);
 }

@@ -29,16 +29,16 @@ export async function PATCH(
     return NextResponse.json({ ok: false, error: "Estado no válido." }, { status: 400 });
   }
 
-  const booking = getBooking(code);
+  const booking = await getBooking(code);
   if (!booking) {
     return NextResponse.json({ ok: false, error: "Reserva no encontrada." }, { status: 404 });
   }
   if (booking.status === status) return NextResponse.json({ ok: true, unchanged: true });
 
-  updateBookingStatus(code, status);
+  await updateBookingStatus(code, status);
 
   if (status === "cancelled") {
-    const updated = getBooking(code)!;
+    const updated = (await getBooking(code))!;
     await sendAll([
       {
         to: updated.client_email,

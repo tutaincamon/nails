@@ -40,6 +40,6 @@ export async function GET(request: NextRequest) {
     depositCents: q.depositCents,
     today,
     maxDaysAhead: siteConfig.booking.maxDaysAhead,
-    days: availabilityRange(from, days, q.durationMin),
+    days: await availabilityRange(from, days, q.durationMin),
   });
 }

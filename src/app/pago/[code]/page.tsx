@@ -22,7 +22,7 @@ export default async function PaymentPage({ params, searchParams }: Props) {
   const { code } = await params;
   const { t: token = "", cancelado } = await searchParams;
 
-  const booking = getBooking(code);
+  const booking = await getBooking(code);
   if (!booking || booking.manage_token !== token) {
     return (
       <div className="section max-w-2xl py-16">

@@ -17,7 +17,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const id = Number((await params).id);
   if (!Number.isInteger(id)) return new NextResponse("Id no válido", { status: 400 });
 
-  const email = getEmail(id);
+  const email = await getEmail(id);
   if (!email) return new NextResponse("No encontrado", { status: 404 });
 
   return new NextResponse(email.html, {

@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  addBlock(date, start, end, reason);
+  await addBlock(date, start, end, reason);
   return NextResponse.json({ ok: true });
 }
 
@@ -45,6 +45,6 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "Id no válido." }, { status: 400 });
   }
 
-  deleteBlock(id);
+  await deleteBlock(id);
   return NextResponse.json({ ok: true });
 }

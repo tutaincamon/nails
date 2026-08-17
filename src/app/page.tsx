@@ -21,9 +21,9 @@ const GALLERY: Finish[] = [
   "nude",
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
   // Duración media para sugerir los próximos huecos reales de la agenda.
-  const upcoming = nextAvailableDays(90, 3);
+  const upcoming = await nextAvailableDays(90, 3);
   const hours = formatDayHours();
 
   return (

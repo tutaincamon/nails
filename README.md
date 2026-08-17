@@ -43,12 +43,13 @@ Contraseña del panel `/admin`: **demo1234** (hasta que configures `ADMIN_PASSWO
 
 Sin claves de terceros, dos cosas funcionan «en seco» para poder probar todo:
 
-| | Modo prototipo | Con la clave puesta |
+| | Modo prototipo | Con la configuración puesta |
 |---|---|---|
-| **Emails** | No salen a internet. Se guardan en la base de datos y en `data/outbox/*.html`, y se leen enteros en `/admin` → pestaña **Emails** | Se envían de verdad con Resend |
+| **Base de datos** | Archivo `data/studio.db` | Turso (SQLite en la nube) |
+| **Emails** | No salen a internet. Se guardan en la base de datos y en `data/outbox/*.html`, y se leen enteros en `/admin` → pestaña **Emails** | Se envían de verdad por SMTP o Resend |
 | **Cobro** | Pantalla de pago simulado. **No pide ni procesa ningún dato de tarjeta**: solo dos botones para simular cobro correcto o rechazado | Stripe Checkout real |
 
-Los dos modos se activan solos según las variables de entorno. Cuando pongas
+Cada modo se activa solo según las variables de entorno. Cuando pongas
 `STRIPE_SECRET_KEY`, la pantalla de pago simulado se desactiva por completo.
 
 ## Personalizar para otra profesional
@@ -77,18 +78,76 @@ La duración de cada servicio es lo que hace que la agenda cuadre: si un
 babyboomer se tarda 3 h, hay que poner `durationMin: 180` y el sistema dejará de
 ofrecer huecos donde no quepa.
 
-## Poner la web en producción
+## Publicarla en internet (Vercel + Turso, gratis)
 
-1. Copia `.env.example` a `.env.local` y rellena lo que quieras activar.
-2. **Contraseña del panel**: pon `ADMIN_PASSWORD`. Es lo primero.
-3. **Emails de verdad**: crea una cuenta en [Resend](https://resend.com), verifica
-   el dominio y pon `RESEND_API_KEY` y `MAIL_FROM`.
-4. **Cobro de la señal**: pon `STRIPE_SECRET_KEY`. Con `sk_test_...` se cobra con
-   tarjetas de prueba; con `sk_live_...` se cobra de verdad. Para que la reserva se
-   confirme aunque la clienta cierre el navegador tras pagar, añade también
-   `STRIPE_WEBHOOK_SECRET` apuntando a `/api/webhooks/stripe`.
-5. **URL pública**: `NEXT_PUBLIC_SITE_URL`, para que los enlaces de los emails
-   funcionen.
+Los dos servicios tienen plan gratuito suficiente para un negocio de una persona.
+
+**1. Base de datos en Turso** — porque en Vercel el disco es efímero y un archivo
+SQLite se perdería en cada despliegue.
+
+```bash
+# instalar la CLI de Turso y entrar
+curl -sSfL https://tur.so/install.sh | bash
+turso auth login
+
+turso db create estudio-unas
+turso db show estudio-unas --url          # -> TURSO_DATABASE_URL
+turso db tokens create estudio-unas       # -> TURSO_AUTH_TOKEN
+```
+
+Las tablas se crean solas la primera vez que arranca la web.
+
+**2. Desplegar en Vercel**
+
+```bash
+npx vercel        # la primera vez, para vincular el proyecto
+npx vercel --prod
+```
+
+**3. Variables de entorno en Vercel** (panel del proyecto → Settings →
+Environment Variables):
+
+| Variable | Para qué |
+|---|---|
+| `TURSO_DATABASE_URL` · `TURSO_AUTH_TOKEN` | Base de datos |
+| `ADMIN_PASSWORD` | Contraseña del panel `/admin` |
+| `NEXT_PUBLIC_SITE_URL` | La URL final, para los enlaces de los emails |
+| `CRON_SECRET` | Protege el endpoint de recordatorios |
+| `SMTP_*` o `RESEND_API_KEY` | Enviar emails de verdad (ver abajo) |
+| `STRIPE_SECRET_KEY` | Cobrar la señal (opcional) |
+
+### Que los emails lleguen de verdad
+
+**Opción rápida: SMTP con Gmail.** No necesita dominio propio.
+
+1. Activa la verificación en dos pasos en tu cuenta de Google.
+2. Crea una **contraseña de aplicación** en
+   [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords).
+3. Pon estas variables (la contraseña, solo en el entorno; nunca en el repo):
+
+   ```
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=465
+   SMTP_USER=tucuenta@gmail.com
+   SMTP_PASSWORD=la-contraseña-de-aplicación
+   MAIL_FROM=Estudio Aura <tucuenta@gmail.com>
+   ```
+
+   Con Gmail el remitente tiene que ser tu propia dirección: si pones otra, Google
+   la reescribe. Gmail limita a unos 500 envíos al día, de sobra para empezar.
+
+**Opción a largo plazo: Resend con dominio propio.** Mejor entregabilidad y un
+remitente tipo `citas@tudominio.com`. Requiere comprar un dominio y verificar
+unos registros DNS. Pon `RESEND_API_KEY` y `MAIL_FROM`.
+
+Si hay las dos configuradas, gana SMTP. El modo activo se ve en `/admin`.
+
+### Cobro de la señal
+
+Pon `STRIPE_SECRET_KEY`. Con `sk_test_...` se cobra con tarjetas de prueba; con
+`sk_live_...` se cobra de verdad. Para que la reserva se confirme aunque la clienta
+cierre el navegador tras pagar, añade también `STRIPE_WEBHOOK_SECRET` con un
+webhook apuntando a `/api/webhooks/stripe`.
 
 ### Recordatorios automáticos
 
@@ -105,14 +164,14 @@ siguiente. Es idempotente: llamarlo varias veces no manda emails repetidos.
 
 ### Base de datos
 
-SQLite en `data/studio.db`, con el módulo `node:sqlite` que ya viene en Node
-(sin dependencias que compilar). Suficiente para un negocio de una persona en un
-servidor propio o un VPS.
+[`src/lib/db.ts`](src/lib/db.ts) es el único archivo que habla con la base de datos,
+y funciona con dos motores usando el mismo SQL (Turso *es* SQLite):
 
-> **Aviso para Vercel y similares**: el disco es efímero, así que las reservas se
-> perderían en cada despliegue. Para desplegar ahí hay que cambiar
-> [`src/lib/db.ts`](src/lib/db.ts) por Postgres, Turso o similar. Es el único
-> archivo que toca la base de datos: el resto de la app solo usa sus funciones.
+- **Sin configurar**: archivo `data/studio.db` con el módulo `node:sqlite` que ya
+  viene en Node. Cero dependencias que compilar. Vale para desarrollo y para un
+  VPS con disco propio.
+- **Con `TURSO_DATABASE_URL`**: Turso por HTTP, sin dependencias nativas. Es lo que
+  permite desplegar en Vercel y similares.
 
 ## Cómo está organizado
 

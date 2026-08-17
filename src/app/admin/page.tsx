@@ -6,6 +6,7 @@ import { isAdmin, usingDefaultPassword } from "@/lib/admin-auth";
 import { allBookings, blocksBetween, recentEmails } from "@/lib/db";
 import { isRealMailConfigured } from "@/lib/mail/send";
 import { isStripeConfigured } from "@/lib/payments";
+import { buildStats } from "@/lib/stats";
 import { addDays, nowInBusinessTz } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +19,7 @@ export default async function AdminPage() {
   }
 
   const today = nowInBusinessTz().date;
+  const stats = await buildStats();
   const bookings = await allBookings(300);
   const blocks = await blocksBetween(today, addDays(today, siteConfig.booking.maxDaysAhead));
 
@@ -36,6 +38,7 @@ export default async function AdminPage() {
   return (
     <AdminDashboard
       today={today}
+      stats={stats}
       bookings={bookings}
       blocks={blocks}
       emails={emails}

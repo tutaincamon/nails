@@ -8,6 +8,8 @@ import type { BlockRow, BookingRow, BookingStatus } from "@/lib/db";
 import { formatCents } from "@/lib/money";
 import { addDays, formatDateLong, formatDuration } from "@/lib/time";
 import { StatusBadge, capitalize, parseAddOns } from "@/components/BookingDetails";
+import { StatsPanel } from "@/components/admin/StatsPanel";
+import type { Stats } from "@/lib/stats";
 
 type EmailSummary = {
   id: number;
@@ -22,6 +24,7 @@ type EmailSummary = {
 
 type Props = {
   today: string;
+  stats: Stats;
   bookings: BookingRow[];
   blocks: BlockRow[];
   emails: EmailSummary[];
@@ -30,9 +33,10 @@ type Props = {
   usingDefaultPassword: boolean;
 };
 
-type Tab = "proximas" | "historico" | "agenda" | "emails";
+type Tab = "resumen" | "proximas" | "historico" | "agenda" | "emails";
 
 const TABS: { id: Tab; label: string }[] = [
+  { id: "resumen", label: "Resumen" },
   { id: "proximas", label: "Próximas citas" },
   { id: "historico", label: "Histórico" },
   { id: "agenda", label: "Bloquear horas" },
@@ -41,7 +45,7 @@ const TABS: { id: Tab; label: string }[] = [
 
 export function AdminDashboard(props: Props) {
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>("proximas");
+  const [tab, setTab] = useState<Tab>("resumen");
   const [notice, setNotice] = useState<string | null>(null);
 
   const upcoming = useMemo(
@@ -147,6 +151,7 @@ export function AdminDashboard(props: Props) {
       </nav>
 
       <div className="mt-6">
+        {tab === "resumen" && <StatsPanel stats={props.stats} />}
         {tab === "proximas" && <BookingList bookings={upcoming} emptyText="No hay citas próximas." />}
         {tab === "historico" && (
           <BookingList bookings={history} emptyText="Todavía no hay histórico." />

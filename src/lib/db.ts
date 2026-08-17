@@ -434,3 +434,11 @@ export async function allBookings(limit = 200): Promise<BookingRow[]> {
     limit,
   ])) as BookingRow[];
 }
+
+/** Todas las reservas desde una fecha, en cualquier estado. Para estadísticas. */
+export async function bookingsFrom(date: string): Promise<BookingRow[]> {
+  const db = await driver();
+  return (await db.all("SELECT * FROM bookings WHERE date >= ? ORDER BY date, start_time", [
+    date,
+  ])) as BookingRow[];
+}

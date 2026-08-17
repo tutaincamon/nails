@@ -1,6 +1,7 @@
 import Link from "next/link";
 import siteConfig from "@config";
 import { formatDayHours } from "@/components/hours-text";
+import { ownerEmail } from "@/lib/business";
 
 export function Footer() {
   const { business } = siteConfig;
@@ -54,8 +55,8 @@ export function Footer() {
               </a>
             </li>
             <li>
-              <a href={`mailto:${business.ownerEmail}`} className="hover:text-ink">
-                {business.ownerEmail}
+              <a href={`mailto:${ownerEmail()}`} className="hover:text-ink">
+                {ownerEmail()}
               </a>
             </li>
             <li className="pt-2">

@@ -2,6 +2,7 @@ import siteConfig from "@config";
 import type { BookingRow } from "@/lib/db";
 import { formatCents } from "@/lib/money";
 import { formatDateLong, formatDuration } from "@/lib/time";
+import { ownerEmail } from "@/lib/business";
 
 /*
  * Plantillas de email en HTML con estilos en línea y tablas: es la única forma
@@ -58,7 +59,7 @@ function shell(opts: {
       <tr><td style="padding:20px 32px;background:${theme.bg};border-top:1px solid ${theme.border};">
         <p style="margin:0 0 6px;font-size:13px;line-height:1.6;color:${theme.muted};">
           ${escapeHtml(business.name)} · ${escapeHtml(business.address.area)}<br>
-          ${escapeHtml(business.phone)} · <a href="mailto:${escapeHtml(business.ownerEmail)}" style="color:${theme.primary};text-decoration:none;">${escapeHtml(business.ownerEmail)}</a>
+          ${escapeHtml(business.phone)} · <a href="mailto:${escapeHtml(ownerEmail())}" style="color:${theme.primary};text-decoration:none;">${escapeHtml(ownerEmail())}</a>
         </p>
         <p style="margin:0;font-size:12px;color:${theme.muted};">Instagram: @${escapeHtml(business.instagram)}</p>
       </td></tr>

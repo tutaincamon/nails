@@ -26,6 +26,7 @@ import {
 } from "@/lib/mail/templates";
 import { sendAll, type Mail } from "@/lib/mail/send";
 import { adminUrl, manageUrl, payUrl } from "@/lib/urls";
+import { ownerEmail } from "@/lib/business";
 
 export type PaymentChoice = "deposit" | "on_site";
 
@@ -160,7 +161,7 @@ export async function notifyConfirmed(booking: BookingRow) {
   const mails: Mail[] = [
     { to: booking.client_email, kind: "client_confirmation", bookingCode: booking.code, ...forClient },
     {
-      to: siteConfig.business.ownerEmail,
+      to: ownerEmail(),
       kind: "owner_notification",
       bookingCode: booking.code,
       ...forOwner,
@@ -218,7 +219,7 @@ export async function cancelBooking(code: string, token: string) {
       ...cancellationNotice(cancelled, false),
     },
     {
-      to: siteConfig.business.ownerEmail,
+      to: ownerEmail(),
       kind: "cancellation_owner",
       bookingCode: code,
       ...cancellationNotice(cancelled, true),

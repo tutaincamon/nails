@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import siteConfig from "@config";
 import { logEmail } from "@/lib/db";
+import { ownerEmail } from "@/lib/business";
 
 /*
  * Envío de emails con tres modos, elegidos automáticamente según las variables
@@ -69,7 +70,7 @@ function fromAddress(): string {
   if (process.env.MAIL_FROM) return process.env.MAIL_FROM;
   const user = process.env.SMTP_USER;
   if (user) return `${siteConfig.business.name} <${user}>`;
-  return siteConfig.business.ownerEmail;
+  return ownerEmail();
 }
 
 export async function sendMail(mail: Mail): Promise<SendResult> {
@@ -101,7 +102,7 @@ async function sendWithSmtp(mail: Mail): Promise<SendResult> {
     await transporter.sendMail({
       from: fromAddress(),
       to: mail.to,
-      replyTo: siteConfig.business.ownerEmail,
+      replyTo: ownerEmail(),
       subject: mail.subject,
       html: mail.html,
       text: mail.text,
@@ -127,7 +128,7 @@ async function sendWithResend(mail: Mail): Promise<SendResult> {
     const { error } = await resend.emails.send({
       from: process.env.MAIL_FROM!,
       to: mail.to,
-      replyTo: siteConfig.business.ownerEmail,
+      replyTo: ownerEmail(),
       subject: mail.subject,
       html: mail.html,
       text: mail.text,

@@ -86,6 +86,18 @@ export function isRemoteDatabase(): boolean {
   return Boolean(process.env.TURSO_DATABASE_URL);
 }
 
+/**
+ * Turso entrega la URL como `libsql://…`, pero el cliente /web habla HTTP.
+ * Se traduce aquí para aceptar la URL tal cual venga de Turso o de Vercel.
+ */
+export function tursoHttpUrl(url: string): string {
+  const trimmed = url.trim();
+  if (trimmed.startsWith("libsql://")) return `https://${trimmed.slice("libsql://".length)}`;
+  if (trimmed.startsWith("wss://")) return `https://${trimmed.slice("wss://".length)}`;
+  if (trimmed.startsWith("ws://")) return `http://${trimmed.slice("ws://".length)}`;
+  return trimmed;
+}
+
 /* -------------------------------------------------------------------------- */
 /*  Motor local: archivo SQLite con node:sqlite                               */
 /* -------------------------------------------------------------------------- */
@@ -128,7 +140,7 @@ async function createTursoDriver(): Promise<Driver> {
   const { createClient } = await import("@libsql/client/web");
 
   const client = createClient({
-    url: process.env.TURSO_DATABASE_URL!,
+    url: tursoHttpUrl(process.env.TURSO_DATABASE_URL!),
     authToken: process.env.TURSO_AUTH_TOKEN,
   });
 

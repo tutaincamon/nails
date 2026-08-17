@@ -43,8 +43,31 @@ export type SendResult = { ok: boolean; transport: Transport; error?: string };
 
 const OUTBOX_DIR = path.join(process.env.DATA_DIR ?? path.join(process.cwd(), "data"), "outbox");
 
+/**
+ * Datos del servidor de correo saliente, o null si no está configurado.
+ *
+ * Con una cuenta de Gmail basta con SMTP_USER y SMTP_PASSWORD: el servidor y el
+ * puerto son siempre los mismos y se rellenan solos. Para cualquier otro
+ * proveedor hay que indicar SMTP_HOST.
+ */
+function smtpSettings(): { host: string; port: number; user: string; pass?: string } | null {
+  const user = process.env.SMTP_USER;
+  if (!user) return null;
+
+  const isGmail = /@(gmail|googlemail)\.com$/i.test(user.trim());
+  const host = process.env.SMTP_HOST || (isGmail ? "smtp.gmail.com" : "");
+  if (!host) return null;
+
+  return {
+    host,
+    port: Number(process.env.SMTP_PORT ?? 465),
+    user: user.trim(),
+    pass: process.env.SMTP_PASSWORD,
+  };
+}
+
 function smtpConfigured(): boolean {
-  return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER);
+  return smtpSettings() !== null;
 }
 
 function resendConfigured(): boolean {
@@ -86,17 +109,14 @@ export async function sendMail(mail: Mail): Promise<SendResult> {
 async function sendWithSmtp(mail: Mail): Promise<SendResult> {
   try {
     const nodemailer = await import("nodemailer");
-    const port = Number(process.env.SMTP_PORT ?? 465);
+    const smtp = smtpSettings()!;
 
     const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port,
+      host: smtp.host,
+      port: smtp.port,
       // 465 va cifrado desde el principio; 587 empieza en claro y sube a TLS.
-      secure: port === 465,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASSWORD,
-      },
+      secure: smtp.port === 465,
+      auth: { user: smtp.user, pass: smtp.pass },
     });
 
     await transporter.sendMail({

@@ -51,7 +51,7 @@ export function ServiceMenu() {
                 <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                   <h3 className="font-display text-[19px] leading-snug text-ink">{service.name}</h3>
                   {service.featured && (
-                    <span className="rounded-full bg-accent/25 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary-dark">
+                    <span className="bg-accent/25 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary-dark">
                       Más pedido
                     </span>
                   )}
@@ -82,7 +82,7 @@ export function ServiceMenu() {
         </ul>
 
         {active.addOns.length > 0 && (
-          <div className="mt-6 rounded-xl border border-line bg-bg p-4">
+          <div className="mt-6 border border-line bg-bg p-4">
             <p className="eyebrow">Extras opcionales</p>
             <ul className="mt-2 space-y-1 text-[14px] text-muted">
               {active.addOns.map((addOn) => (

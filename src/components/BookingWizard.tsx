@@ -163,7 +163,7 @@ export function BookingWizard() {
         {error && (
           <p
             role="alert"
-            className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[14px] text-red-800"
+            className="mt-6 border border-red-200 bg-red-50 px-4 py-3 text-[14px] text-red-800"
           >
             {error}
           </p>
@@ -208,7 +208,7 @@ export function BookingWizard() {
                         setAddOnIds([]);
                       }}
                       aria-pressed={selected}
-                      className={`flex w-full items-start gap-4 rounded-2xl border p-4 text-left transition-all ${
+                      className={`flex w-full items-start gap-4 border p-4 text-left transition-all ${
                         selected
                           ? "border-primary bg-primary/[0.04] shadow-sm"
                           : "border-line bg-surface hover:border-primary/60"
@@ -252,7 +252,7 @@ export function BookingWizard() {
             </ul>
 
             {serviceId && availableAddOns.length > 0 && (
-              <fieldset className="mt-6 rounded-2xl border border-line bg-surface p-4">
+              <fieldset className="mt-6 border border-line bg-surface p-4">
                 <legend className="eyebrow px-1">¿Necesitas algún extra?</legend>
                 <ul className="mt-2 space-y-2">
                   {availableAddOns.map((addOn) => (
@@ -312,7 +312,7 @@ export function BookingWizard() {
             {date && <SlotPicker day={days.find((d) => d.date === date)} value={time} onSelect={setTime} />}
 
             {!date && !loadingSlots && (
-              <p className="mt-6 rounded-xl border border-line bg-surface px-4 py-8 text-center text-[14px] text-muted">
+              <p className="mt-6 border border-line bg-surface px-4 py-8 text-center text-[14px] text-muted">
                 Elige un día arriba para ver las horas libres.
               </p>
             )}
@@ -396,7 +396,7 @@ export function BookingWizard() {
           <div className="animate-rise mt-8">
             <h2 className="text-[26px]">Repasa y confirma</h2>
 
-            <dl className="mt-6 divide-y divide-line rounded-2xl border border-line bg-surface px-5">
+            <dl className="mt-6 divide-y divide-line border border-line bg-surface px-5">
               <Row label="Servicio" value={current.service.name} />
               {current.addOns.length > 0 && (
                 <Row label="Extras" value={current.addOns.map((a) => a.name).join(", ")} />
@@ -545,7 +545,7 @@ export function BookingWizard() {
               </dl>
 
               {deposit.enabled && current.depositCents > 0 && (
-                <p className="mt-4 rounded-lg bg-bg px-3 py-2.5 text-[12.5px] leading-relaxed text-muted">
+                <p className="mt-4 bg-bg px-3 py-2.5 text-[12.5px] leading-relaxed text-muted">
                   {payment === "deposit"
                     ? `Ahora pagas ${formatCents(current.depositCents)} de señal; el resto en el estudio.`
                     : "Pagarás el importe completo en el estudio."}
@@ -611,7 +611,7 @@ function Progress({ step, onJump }: { step: Step; onJump: (step: Step) => void }
               type="button"
               onClick={() => onJump(index as Step)}
               disabled={!done}
-              className={`flex items-center gap-2 rounded-full px-3 py-1.5 transition-colors ${
+              className={`flex items-center gap-2 px-3 py-1.5 transition-colors ${
                 active
                   ? "bg-primary text-white"
                   : done
@@ -698,7 +698,7 @@ function WeekPicker({
               aria-label={`${formatDateLong(day.date)}: ${
                 free === 0 ? "sin huecos libres" : `${free} hueco${free === 1 ? "" : "s"} libre${free === 1 ? "" : "s"}`
               }`}
-              className={`rounded-xl border px-1 py-2.5 text-center transition-all ${
+              className={`border px-1 py-2.5 text-center transition-all ${
                 selected
                   ? "border-primary bg-primary text-white shadow-sm"
                   : free === 0
@@ -719,7 +719,7 @@ function WeekPicker({
 
         {days.length === 0 &&
           Array.from({ length: 7 }).map((_, i) => (
-            <div key={i} className="h-[74px] animate-pulse rounded-xl bg-line/50" />
+            <div key={i} className="h-[74px] animate-pulse bg-line/50" />
           ))}
       </div>
 
@@ -741,7 +741,7 @@ function SlotPicker({
 
   if (day.slots.length === 0) {
     return (
-      <p className="mt-6 rounded-xl border border-line bg-surface px-4 py-6 text-center text-[14px] text-muted">
+      <p className="mt-6 border border-line bg-surface px-4 py-6 text-center text-[14px] text-muted">
         Ese día no queda sitio para este servicio. Prueba con otro día.
       </p>
     );
@@ -762,7 +762,7 @@ function SlotPicker({
               onClick={() => onSelect(slot.start)}
               aria-pressed={value === slot.start}
               aria-label={`Cita de ${slot.start} a ${slot.end}`}
-              className={`rounded-full border px-4 py-2 text-[14px] font-medium transition-all ${
+              className={`border px-4 py-2 text-[14px] font-medium transition-all ${
                 value === slot.start
                   ? "border-primary bg-primary text-white shadow-sm"
                   : "border-line bg-surface text-ink hover:border-primary hover:text-primary"
@@ -776,7 +776,7 @@ function SlotPicker({
     );
 
   return (
-    <div className="mt-6 rounded-2xl border border-line bg-surface p-5">
+    <div className="mt-6 border border-line bg-surface p-5">
       <p className="text-[14px] font-semibold text-ink">{formatDateLong(day.date)}</p>
       {group("Mañana", morning)}
       {group("Tarde", afternoon)}
@@ -804,7 +804,7 @@ function PaymentOption({
 }) {
   return (
     <label
-      className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-all ${
+      className={`flex cursor-pointer items-start gap-3 border p-4 transition-all ${
         checked ? "border-primary bg-primary/[0.04]" : "border-line bg-surface hover:border-primary/60"
       }`}
     >

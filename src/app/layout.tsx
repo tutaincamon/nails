@@ -1,8 +1,22 @@
 import type { Metadata } from "next";
+import { Archivo } from "next/font/google";
 import siteConfig from "@config";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import "./globals.css";
+
+/*
+ * Archivo es una grotesca con eje de anchura variable. En su versión ancha y
+ * pesada da el carácter de titular rotundo que buscábamos, y al descargarla
+ * next/font la sirve desde nuestro propio dominio: ni una petición a Google
+ * desde el navegador de la clienta.
+ */
+const archivo = Archivo({
+  subsets: ["latin"],
+  axes: ["wdth"],
+  display: "swap",
+  variable: "--font-archivo",
+});
 
 const { business, theme } = siteConfig;
 
@@ -35,7 +49,7 @@ const themeVars = `:root{
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang={business.locale.split("-")[0]}>
+    <html lang={business.locale.split("-")[0]} className={archivo.variable}>
       <head>
         <style dangerouslySetInnerHTML={{ __html: themeVars }} />
         <meta name="theme-color" content={theme.bg} />
@@ -43,7 +57,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <a
           href="#contenido"
-          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:text-white"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:text-white"
         >
           Saltar al contenido
         </a>

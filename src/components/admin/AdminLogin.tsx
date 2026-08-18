@@ -68,7 +68,7 @@ export function AdminLogin({ showDefaultHint }: { showDefaultHint: boolean }) {
       </form>
 
       {showDefaultHint && (
-        <p className="mt-6 rounded-xl border border-dashed border-line bg-surface px-4 py-3 text-[12.5px] leading-relaxed text-muted">
+        <p className="mt-6 border border-dashed border-line bg-surface px-4 py-3 text-[12.5px] leading-relaxed text-muted">
           <strong className="text-ink">Sin contraseña configurada.</strong> Se está usando la de
           ejemplo: <code className="font-mono font-semibold">demo1234</code>. Cámbiala poniendo{" "}
           <code className="font-mono">ADMIN_PASSWORD</code> en <code className="font-mono">.env.local</code>{" "}

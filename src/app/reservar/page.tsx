@@ -33,12 +33,12 @@ function WizardSkeleton() {
   return (
     <div className="section grid gap-8 py-10 lg:grid-cols-[1fr_340px] lg:gap-12 lg:py-14">
       <div className="space-y-3">
-        <div className="h-9 w-2/3 animate-pulse rounded-lg bg-line/60" />
+        <div className="h-9 w-2/3 animate-pulse bg-line/60" />
         {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="h-20 animate-pulse rounded-2xl bg-line/40" />
+          <div key={i} className="h-20 animate-pulse bg-line/40" />
         ))}
       </div>
-      <div className="h-64 animate-pulse rounded-2xl bg-line/40" />
+      <div className="h-64 animate-pulse bg-line/40" />
     </div>
   );
 }

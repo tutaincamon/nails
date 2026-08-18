@@ -48,7 +48,7 @@ export function CancelBooking({ code, token }: { code: string; token: string }) 
   }
 
   return (
-    <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+    <div className="border border-red-200 bg-red-50 p-4">
       <p className="text-[14px] font-semibold text-red-900">¿Seguro que quieres cancelar?</p>
       <p className="mt-1 text-[13px] leading-relaxed text-red-800">
         El hueco quedará libre para otra persona y no se puede recuperar: habría que reservar de

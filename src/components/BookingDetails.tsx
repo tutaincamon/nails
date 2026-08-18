@@ -14,7 +14,7 @@ export function StatusBadge({ status }: { status: BookingRow["status"] }) {
   const label = STATUS_LABELS[status];
   return (
     <span
-      className={`inline-block rounded-full px-3 py-1 text-[12px] font-semibold ${label.className}`}
+      className={`inline-block px-3 py-1 text-[12px] font-semibold ${label.className}`}
     >
       {label.text}
     </span>

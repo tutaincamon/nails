@@ -84,7 +84,7 @@ export default async function BookingPage({ params, searchParams }: Props) {
       </div>
 
       {booking.status !== "cancelled" && (
-        <div className="mt-6 rounded-xl border border-line bg-surface p-5">
+        <div className="mt-6 border border-line bg-surface p-5">
           <p className="eyebrow">Cómo llegar</p>
           <p className="mt-2 text-[14px] leading-relaxed text-muted">
             {siteConfig.business.address.note}
@@ -131,7 +131,7 @@ export default async function BookingPage({ params, searchParams }: Props) {
       </div>
 
       {!isRealMailConfigured() && (
-        <p className="mt-8 rounded-xl border border-dashed border-line bg-bg px-4 py-3 text-[12.5px] leading-relaxed text-muted">
+        <p className="mt-8 border border-dashed border-line bg-bg px-4 py-3 text-[12.5px] leading-relaxed text-muted">
           <strong className="text-ink">Modo prototipo:</strong> no hay servicio de email
           configurado, así que los correos no salen a internet. Puedes leerlos enteros en{" "}
           <Link href="/admin" className="font-semibold text-primary hover:underline">

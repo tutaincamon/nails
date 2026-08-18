@@ -102,16 +102,17 @@ export const siteConfig = {
   /*     Cambia estos colores y la web entera cambia de estilo.             */
   /* ---------------------------------------------------------------------- */
   theme: {
-    /** Color principal (botones, acentos) */
-    primary: "#8d5b4c",
-    primaryDark: "#6f4438",
-    /** Fondo general, cálido */
-    bg: "#faf6f3",
+    /** Color principal: negro cálido. Los botones son rectángulos sólidos. */
+    primary: "#15120f",
+    primaryDark: "#000000",
+    /** Fondo hueso, no blanco puro: descansa la vista y hace destacar las fotos. */
+    bg: "#f5f4f1",
     surface: "#ffffff",
-    ink: "#2c2320",
-    muted: "#7d6c64",
-    border: "#e8ddd6",
-    accent: "#d9a8a0",
+    ink: "#15120f",
+    muted: "#6f6a62",
+    border: "#dcd8d0",
+    /** Único toque de color, usado con cuentagotas. */
+    accent: "#b07d63",
   },
 
   /* ---------------------------------------------------------------------- */

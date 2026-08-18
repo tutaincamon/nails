@@ -125,7 +125,7 @@ export function AdminDashboard(props: Props) {
       />
 
       {notice && (
-        <p className="mt-4 rounded-xl border border-line bg-surface px-4 py-3 text-[14px] text-ink">
+        <p className="mt-4 border border-line bg-surface px-4 py-3 text-[14px] text-ink">
           {notice}
         </p>
       )}
@@ -190,7 +190,7 @@ function ModeBanner({
       {warnings.map((warning) => (
         <li
           key={warning}
-          className="rounded-xl border border-dashed border-accent bg-surface px-4 py-3 text-[13px] leading-relaxed text-muted"
+          className="border border-dashed border-accent bg-surface px-4 py-3 text-[13px] leading-relaxed text-muted"
         >
           {warning}
         </li>
@@ -202,7 +202,7 @@ function ModeBanner({
 function BookingList({ bookings, emptyText }: { bookings: BookingRow[]; emptyText: string }) {
   if (bookings.length === 0) {
     return (
-      <p className="rounded-2xl border border-line bg-surface px-5 py-10 text-center text-[14px] text-muted">
+      <p className="border border-line bg-surface px-5 py-10 text-center text-[14px] text-muted">
         {emptyText}
       </p>
     );
@@ -296,7 +296,7 @@ function BookingCard({ booking }: { booking: BookingRow }) {
       </div>
 
       {booking.notes && (
-        <p className="mt-2 rounded-lg bg-bg px-3 py-2 text-[13px] leading-relaxed text-ink">
+        <p className="mt-2 bg-bg px-3 py-2 text-[13px] leading-relaxed text-ink">
           <span className="font-semibold">Nota:</span> {booking.notes}
         </p>
       )}
@@ -447,7 +447,7 @@ function BlocksTab({ blocks, today }: { blocks: BlockRow[]; today: string }) {
       <div>
         <h2 className="text-[19px]">Bloqueos activos</h2>
         {blocks.length === 0 ? (
-          <p className="mt-3 rounded-2xl border border-line bg-surface px-5 py-8 text-center text-[14px] text-muted">
+          <p className="mt-3 border border-line bg-surface px-5 py-8 text-center text-[14px] text-muted">
             No tienes ningún rato bloqueado.
           </p>
         ) : (
@@ -523,7 +523,7 @@ function EmailsTab({
 
   if (emails.length === 0) {
     return (
-      <p className="rounded-2xl border border-line bg-surface px-5 py-10 text-center text-[14px] text-muted">
+      <p className="border border-line bg-surface px-5 py-10 text-center text-[14px] text-muted">
         Todavía no se ha enviado ningún email. Haz una reserva de prueba y aparecerá aquí.
       </p>
     );
@@ -537,7 +537,7 @@ function EmailsTab({
             <button
               type="button"
               onClick={() => setOpenId(email.id)}
-              className={`w-full rounded-xl border p-3 text-left transition-colors ${
+              className={`w-full border p-3 text-left transition-colors ${
                 openId === email.id
                   ? "border-primary bg-primary/[0.04]"
                   : "border-line bg-surface hover:border-primary/60"
@@ -566,7 +566,7 @@ function EmailsTab({
                 <span className="mt-1 block text-[11.5px] text-red-700">Error: {email.error}</span>
               )}
               {email.transport === "simulado" && (
-                <span className="mt-1 inline-block rounded-full bg-line px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
+                <span className="mt-1 inline-block bg-line px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
                   no enviado · simulado
                 </span>
               )}

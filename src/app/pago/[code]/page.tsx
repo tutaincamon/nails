@@ -59,7 +59,7 @@ export default async function PaymentPage({ params, searchParams }: Props) {
       </p>
 
       {cancelado && (
-        <p className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[14px] text-amber-900">
+        <p className="mt-6 border border-amber-200 bg-amber-50 px-4 py-3 text-[14px] text-amber-900">
           Has salido del pago sin completarlo. Tu hueco sigue guardado: puedes pagar la señal ahora.
         </p>
       )}

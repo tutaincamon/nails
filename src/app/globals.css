@@ -5,14 +5,14 @@
  * Estos son solo el punto de partida por si falta la configuración.
  * ------------------------------------------------------------------------ */
 :root {
-  --c-primary: #8d5b4c;
-  --c-primary-dark: #6f4438;
-  --c-bg: #faf6f3;
+  --c-primary: #15120f;
+  --c-primary-dark: #000000;
+  --c-bg: #f5f4f1;
   --c-surface: #ffffff;
-  --c-ink: #2c2320;
-  --c-muted: #7d6c64;
-  --c-border: #e8ddd6;
-  --c-accent: #d9a8a0;
+  --c-ink: #15120f;
+  --c-muted: #6f6a62;
+  --c-border: #dcd8d0;
+  --c-accent: #b07d63;
 }
 
 @theme inline {
@@ -25,109 +25,140 @@
   --color-line: var(--c-border);
   --color-accent: var(--c-accent);
 
-  --font-display: "Cormorant Garamond", "Iowan Old Style", "Palatino Linotype", Palatino,
-    Georgia, "Times New Roman", serif;
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
-    Arial, sans-serif;
+  /* Una sola familia para todo, en distintos anchos y pesos. Es lo que hace
+     que una web parezca diseñada y no ensamblada. */
+  --font-sans: var(--font-archivo), "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font-archivo), "Helvetica Neue", Arial, sans-serif;
+
+  /* Nada de esquinas redondeadas: todo en ángulo recto. */
+  --radius-none: 0px;
 }
 
 @layer base {
   html {
     scroll-behavior: smooth;
-    /* Compensa la barra de navegación fija al saltar a una sección */
-    scroll-padding-top: 5.5rem;
+    scroll-padding-top: 5rem;
   }
 
   body {
     background-color: var(--c-bg);
     color: var(--c-ink);
     font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     text-wrap: pretty;
   }
 
-  h1, h2, h3 {
+  /*
+   * Los titulares van en mayúsculas, en la versión ancha y pesada de la
+   * tipografía, y con la línea muy justa (0.92). Ese interlineado tan cerrado
+   * es lo que convierte un título en un bloque compacto en vez de en texto
+   * grande suelto.
+   */
+  h1, h2 {
     font-family: var(--font-display);
-    font-weight: 500;
+    font-weight: 700;
+    font-stretch: 125%;
+    text-transform: uppercase;
+    line-height: 0.92;
     letter-spacing: -0.015em;
     text-wrap: balance;
   }
 
-  ::selection {
-    background: var(--c-accent);
-    color: #fff;
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-stretch: 110%;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
   }
 
-  /* Foco visible siempre, para poder navegar con teclado */
+  ::selection {
+    background: var(--c-ink);
+    color: var(--c-bg);
+  }
+
   :focus-visible {
-    outline: 2px solid var(--c-primary);
-    outline-offset: 2px;
-    border-radius: 4px;
+    outline: 2px solid var(--c-ink);
+    outline-offset: 3px;
   }
 }
 
 @layer components {
   /* En Tailwind 4 @apply solo acepta utilidades, no clases propias. Por eso la
-     base va en un selector agrupado y los modificadores después: el orden del
-     archivo decide qué gana, así `btn-primary btn-sm` da siempre el botón
-     pequeño de color. */
+     base va en un selector agrupado y los modificadores después. */
   .btn,
   .btn-primary,
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3
-           text-[15px] font-semibold transition-all duration-200
-           disabled:cursor-not-allowed disabled:opacity-45;
+    @apply inline-flex items-center justify-center gap-2 px-7 py-3.5
+           text-[12px] font-bold uppercase tracking-[0.14em]
+           transition-colors duration-200
+           disabled:cursor-not-allowed disabled:opacity-40;
   }
 
   .btn-primary {
-    @apply bg-primary text-white shadow-sm hover:bg-primary-dark
-           hover:shadow-md active:scale-[0.985];
+    @apply bg-ink text-[var(--c-bg)] hover:bg-[var(--c-accent)];
   }
 
   .btn-ghost {
-    @apply border border-line bg-surface text-ink hover:border-primary hover:text-primary;
+    @apply border border-ink/25 text-ink hover:border-ink hover:bg-ink hover:text-[var(--c-bg)];
   }
 
   /* Debe ir después de las variantes de color para poder reducir el tamaño. */
   .btn-sm {
-    @apply rounded-full px-4 py-2 text-[13px] font-semibold;
+    @apply px-5 py-2.5 text-[11px] tracking-[0.12em];
+  }
+
+  /* Botón claro, para cuando va encima de una foto oscura. */
+  .btn-light {
+    @apply bg-[var(--c-bg)] text-ink hover:bg-white;
   }
 
   .card {
-    @apply rounded-2xl border border-line bg-surface;
+    @apply border border-line bg-surface;
   }
 
   .eyebrow {
-    @apply text-[11px] font-semibold uppercase tracking-[0.18em] text-muted;
+    @apply text-[11px] font-semibold uppercase tracking-[0.2em] text-muted;
   }
 
   .section {
-    @apply mx-auto w-full max-w-6xl px-5 sm:px-8;
+    @apply mx-auto w-full max-w-[1400px] px-5 sm:px-8 lg:px-12;
   }
 
   .field {
-    @apply w-full rounded-xl border border-line bg-surface px-4 py-3 text-[15px]
-           text-ink transition-colors placeholder:text-muted/60
-           focus:border-primary focus:outline-none;
+    @apply w-full border border-line bg-surface px-4 py-3 text-[15px]
+           text-ink transition-colors placeholder:text-muted/50
+           focus:border-ink focus:outline-none;
   }
 
   .field-error {
-    @apply border-red-400 focus:border-red-500;
+    @apply border-red-500;
   }
 
   .label {
-    @apply mb-1.5 block text-[13px] font-semibold text-ink;
+    @apply mb-2 block text-[11px] font-semibold uppercase tracking-[0.14em] text-muted;
+  }
+
+  /* Titular a sangre, del tamaño del contenedor. */
+  .display {
+    font-size: clamp(2.75rem, 9vw, 7.5rem);
+  }
+
+  .display-sm {
+    font-size: clamp(2rem, 5.5vw, 4rem);
   }
 }
 
 /* Aparición suave de secciones y pasos del wizard */
 @keyframes rise {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
 .animate-rise {
-  animation: rise 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @media (prefers-reduced-motion: reduce) {

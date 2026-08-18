@@ -99,8 +99,8 @@ export function PaymentPanel({
           {working ? "Abriendo pago seguro…" : `Pagar ${amountLabel}`}
         </button>
       ) : (
-        <div className="rounded-2xl border-2 border-dashed border-accent bg-surface p-5">
-          <p className="inline-block rounded-full bg-accent/25 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-primary-dark">
+        <div className="border-2 border-dashed border-accent bg-surface p-5">
+          <p className="inline-block bg-accent/25 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-primary-dark">
             Modo demostración
           </p>
           <p className="mt-3 text-[14px] leading-relaxed text-muted">
@@ -139,7 +139,7 @@ export function PaymentPanel({
       {error && (
         <p
           role="alert"
-          className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[14px] text-red-800"
+          className="mt-4 border border-red-200 bg-red-50 px-4 py-3 text-[14px] text-red-800"
         >
           {error}
         </p>

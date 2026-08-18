@@ -115,7 +115,7 @@ export function StatsPanel({ stats }: { stats: Stats }) {
                   <div
                     title={`${month.label}: ${formatCents(month.revenueCents)} · ${month.bookings} citas`}
                     style={{ height: Math.max(height, month.revenueCents > 0 ? 4 : 2) }}
-                    className={`w-full rounded-t transition-colors ${
+                    className={`w-full transition-colors ${
                       isCurrent ? "bg-primary" : month.revenueCents > 0 ? "bg-accent" : "bg-line"
                     }`}
                   />
@@ -147,8 +147,8 @@ export function StatsPanel({ stats }: { stats: Stats }) {
                       {service.count} · {formatCents(service.revenueCents)}
                     </span>
                   </div>
-                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-bg">
-                    <div className="h-full rounded-full bg-accent" style={{ width: `${share}%` }} />
+                  <div className="mt-1 h-1.5 overflow-hidden bg-bg">
+                    <div className="h-full bg-accent" style={{ width: `${share}%` }} />
                   </div>
                 </li>
               );
@@ -180,7 +180,7 @@ export function StatsPanel({ stats }: { stats: Stats }) {
       </div>
 
       {/* -------------------------------------------------------------- NOTAS */}
-      <div className="rounded-xl border border-dashed border-line bg-surface px-4 py-3 text-[12.5px] leading-relaxed text-muted">
+      <div className="border border-dashed border-line bg-surface px-4 py-3 text-[12.5px] leading-relaxed text-muted">
         <p>
           <strong className="text-ink">Cómo se cuentan estos números.</strong> Suman las citas
           confirmadas y las ya realizadas. Las canceladas no suman, y las que esperan la señal
@@ -218,7 +218,7 @@ function Kpi({
       <div className="mt-2 flex flex-wrap items-center gap-2">
         {change !== null && change !== undefined && (
           <span
-            className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+            className={`px-2 py-0.5 text-[11px] font-semibold ${
               change > 0
                 ? "bg-green-100 text-green-800"
                 : change < 0

@@ -84,16 +84,24 @@ export const siteConfig = {
   /* ---------------------------------------------------------------------- */
   gallery: [
     {
-      src: "/galeria/margaritas-abejas.jpg",
-      alt: "Manicura almendrada en nude mate con margaritas blancas y abejas pintadas a mano",
+      src: "/galeria/floral-rosa.jpg",
+      alt: "Uñas almendradas en rosa translúcido con una flor blanca pintada a mano y lunares granate",
     },
     {
-      src: "/galeria/verano-colores.jpg",
-      alt: "Uñas de verano en amarillo, azul y rosa con estrellas, rayas, lunares y peces",
+      src: "/galeria/animal-print.jpg",
+      alt: "Manicura almendrada con francesas en azul bebé y granate y uñas con manchas de animal print",
     },
     {
-      src: "/galeria/margaritas-detalle.jpg",
-      alt: "Detalle de dos uñas nude con margaritas y una abeja en relieve",
+      src: "/galeria/frances-azul.jpg",
+      alt: "Francesa larga en azul claro con dos uñas decoradas con flores blancas sobre punta negra",
+    },
+    {
+      src: "/galeria/rayas-color.jpg",
+      alt: "Uñas cortas con rayas de caramelo en rojo, azul y amarillo y puntas de lunares",
+    },
+    {
+      src: "/galeria/dalmata-frances.jpg",
+      alt: "Uñas almendradas combinando francesas de colores y manchas estilo dálmata en tonos tierra",
     },
   ] as { src: string; alt: string }[],
 

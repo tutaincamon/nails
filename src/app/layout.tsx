@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Archivo } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import siteConfig from "@config";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
@@ -64,6 +65,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Nav />
         <main id="contenido">{children}</main>
         <Footer />
+        {/*
+          Analítica de Vercel: cuenta visitas sin cookies y sin identificar a
+          nadie, así que no hace falta banner de consentimiento. Dice cuánta
+          gente entra y a qué páginas, nunca quién.
+        */}
+        <Analytics />
       </body>
     </html>
   );

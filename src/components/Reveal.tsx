@@ -3,33 +3,23 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 /*
- * Aparición al entrar en pantalla, en tres registros.
+ * Aparición al entrar en pantalla.
  *
  * Usa IntersectionObserver y no las animaciones CSS ligadas al scroll, que son
- * más elegantes pero todavía no funcionan en Firefox. Se dispara una sola vez:
- * que un elemento vuelva a desvanecerse al subir marea.
- *
- * Solo se animan `opacity`, `transform` y `clip-path`, que el navegador puede
- * resolver sin recalcular el diseño de la página. Animar alto o posición daría
- * tirones en el móvil, que es justo donde va a entrar casi todo el mundo.
+ * más elegantes pero todavía no funcionan en todos los navegadores. Se dispara
+ * una sola vez: que un elemento vuelva a desvanecerse al subir marea.
  *
  * Si el sistema pide menos movimiento, el contenido aparece sin animación.
  */
-
-export type RevealVariant = "fade" | "wipe";
-
 export function Reveal({
   children,
   className = "",
   delay = 0,
-  variant = "fade",
 }: {
   children: ReactNode;
   className?: string;
   /** Milisegundos de retardo, para escalonar varios elementos seguidos. */
   delay?: number;
-  /** "fade" sube y aparece · "wipe" se descubre de abajo arriba. */
-  variant?: RevealVariant;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
@@ -49,35 +39,21 @@ export function Reveal({
         setVisible(true);
         observer.disconnect();
       },
-      { rootMargin: "0px 0px -8% 0px", threshold: 0.12 },
+      // Se activa un poco antes de llegar al borde inferior.
+      { rootMargin: "0px 0px -10% 0px", threshold: 0.15 },
     );
 
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
 
-  const hidden =
-    variant === "wipe"
-      ? { clipPath: "inset(100% 0 0 0)" }
-      : { opacity: 0, transform: "translateY(2.5rem)" };
-
-  const shown =
-    variant === "wipe"
-      ? { clipPath: "inset(0% 0 0 0)" }
-      : { opacity: 1, transform: "translateY(0)" };
-
   return (
     <div
       ref={ref}
-      data-revealed={visible ? "true" : "false"}
-      style={{
-        ...(visible ? shown : hidden),
-        transitionProperty: "opacity, transform, clip-path",
-        transitionDuration: variant === "wipe" ? "1200ms" : "900ms",
-        transitionTimingFunction: "cubic-bezier(0.16, 1, 0.3, 1)",
-        transitionDelay: `${delay}ms`,
-      }}
-      className={className}
+      style={{ transitionDelay: `${delay}ms` }}
+      className={`transition-[opacity,transform] duration-[1000ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${
+        visible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
+      } ${className}`}
     >
       {children}
     </div>

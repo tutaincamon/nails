@@ -151,20 +151,6 @@
   }
 }
 
-/*
- * Zoom muy lento de la foto de portada. Veinte segundos y solo un 8 %: no se
- * percibe como animación, únicamente evita que la imagen parezca un cartel
- * pegado. Va y vuelve para que no dé un salto al reiniciarse.
- */
-@keyframes kenburns {
-  from { transform: scale(1); }
-  to   { transform: scale(1.08); }
-}
-
-.animate-kenburns {
-  animation: kenburns 20s ease-in-out infinite alternate;
-}
-
 /* Aparición suave de secciones y pasos del wizard */
 @keyframes rise {
   from { opacity: 0; transform: translateY(12px); }
@@ -177,7 +163,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .animate-rise,
-  .animate-kenburns { animation: none; }
+  .animate-rise { animation: none; }
   * { transition-duration: 0.01ms !important; }
 }

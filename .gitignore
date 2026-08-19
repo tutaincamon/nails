@@ -15,3 +15,6 @@ next-env.d.ts
 
 .DS_Store
 .vercel
+
+# Configuración local de servidores MCP: no forma parte del producto.
+.mcp.json

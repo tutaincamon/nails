@@ -1,6 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
 import siteConfig from "@config";
+import { HeroImage } from "@/components/HeroImage";
+import { PhotoReveal } from "@/components/PhotoReveal";
 import { Reveal } from "@/components/Reveal";
 import { ServiceMenu } from "@/components/ServiceMenu";
 import { formatDayHours } from "@/components/hours-text";
@@ -30,7 +31,7 @@ export default async function HomePage() {
       {/* ---------------------------------------------------------------- HERO */}
       <section className="relative flex h-[86vh] min-h-[540px] w-full items-end overflow-hidden">
         {hero ? (
-          <Image src={hero.src} alt={hero.alt} fill priority sizes="100vw" className="object-cover" />
+          <HeroImage src={hero.src} alt={hero.alt} />
         ) : (
           <div className="absolute inset-0 bg-ink" />
         )}
@@ -92,21 +93,9 @@ export default async function HomePage() {
           */}
           <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 lg:gap-x-16 lg:gap-y-20">
             {gallery.map((photo, index) => (
-              <Reveal
-                key={photo.src}
-                delay={(index % 2) * 90}
-                className={index % 2 === 1 ? "sm:mt-24 lg:mt-32" : ""}
-              >
-                <figure className="group relative aspect-[3/4] overflow-hidden bg-line/40">
-                  <Image
-                    src={photo.src}
-                    alt={photo.alt}
-                    fill
-                    sizes="(max-width: 640px) 100vw, 45vw"
-                    className="object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.04]"
-                  />
-                </figure>
-              </Reveal>
+              <div key={photo.src} className={index % 2 === 1 ? "sm:mt-24 lg:mt-32" : ""}>
+                <PhotoReveal src={photo.src} alt={photo.alt} delay={(index % 2) * 120} />
+              </div>
             ))}
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { bookingsOn, isRemoteDatabase } from "@/lib/db";
+import { bookingsOn, isRemoteDatabase, recentEmails } from "@/lib/db";
+import { env } from "@/lib/env";
 import { mailTransport } from "@/lib/mail/send";
 import { isStripeConfigured } from "@/lib/payments";
 
@@ -21,7 +22,9 @@ export const dynamic = "force-dynamic";
 function redact(text: string): string {
   return text
     .replace(/eyJ[A-Za-z0-9_\-.]{20,}/g, "[token oculto]")
-    .replace(/[A-Za-z0-9_\-]{40,}/g, "[oculto]");
+    .replace(/[A-Za-z0-9_\-]{40,}/g, "[oculto]")
+    // Los errores de SMTP suelen citar la cuenta que intentó enviar.
+    .replace(/[^\s<>"]+@[^\s<>"]+/g, "[correo oculto]");
 }
 
 export async function GET() {
@@ -33,6 +36,11 @@ export async function GET() {
     tursoUrlProtocolo: url ? `${url.split("://")[0]}://` : null,
     tursoTokenPuesto: Boolean(process.env.TURSO_AUTH_TOKEN),
     emails: mailTransport(),
+    // Qué piezas del correo están puestas. Nunca su valor, solo si existen:
+    // un envío puede quedarse a medias por faltar solo la contraseña.
+    smtpUsuarioPuesto: Boolean(env("SMTP_USER")),
+    smtpContrasenaPuesta: Boolean(env("SMTP_PASSWORD")),
+    remitentePuesto: Boolean(env("MAIL_FROM")),
     ownerEmailPuesto: Boolean(process.env.OWNER_EMAIL),
     adminPasswordPuesta: Boolean(process.env.ADMIN_PASSWORD),
     cronSecretPuesto: Boolean(process.env.CRON_SECRET),
@@ -42,7 +50,18 @@ export async function GET() {
   try {
     // Consulta trivial: si esto responde, la conexión y las tablas están bien.
     await bookingsOn("1970-01-01");
-    return NextResponse.json({ ok: true, consulta: "correcta", ...config });
+
+    /*
+     * Último fallo de envío, si lo hay. Es lo que convierte "no me llega el
+     * correo" en un motivo concreto, sin tener que entrar al panel. Va limpio
+     * de credenciales y de direcciones antes de salir.
+     */
+    const fallido = (await recentEmails(15)).find((e) => e.error);
+    const ultimoErrorDeCorreo = fallido
+      ? { cuando: fallido.created_at, motivo: redact(fallido.error!).slice(0, 300) }
+      : null;
+
+    return NextResponse.json({ ok: true, consulta: "correcta", ultimoErrorDeCorreo, ...config });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return NextResponse.json(

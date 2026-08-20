@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import siteConfig from "@config";
 import { logEmail } from "@/lib/db";
+import { env } from "@/lib/env";
 import { ownerEmail } from "@/lib/business";
 
 /*
@@ -41,7 +42,7 @@ export type Mail = {
 export type Transport = "smtp" | "resend" | "simulado";
 export type SendResult = { ok: boolean; transport: Transport; error?: string };
 
-const OUTBOX_DIR = path.join(process.env.DATA_DIR ?? path.join(process.cwd(), "data"), "outbox");
+const OUTBOX_DIR = path.join(env("DATA_DIR") ?? path.join(process.cwd(), "data"), "outbox");
 
 /**
  * Datos del servidor de correo saliente, o null si no está configurado.
@@ -51,18 +52,18 @@ const OUTBOX_DIR = path.join(process.env.DATA_DIR ?? path.join(process.cwd(), "d
  * proveedor hay que indicar SMTP_HOST.
  */
 function smtpSettings(): { host: string; port: number; user: string; pass?: string } | null {
-  const user = process.env.SMTP_USER;
+  const user = env("SMTP_USER");
   if (!user) return null;
 
   const isGmail = /@(gmail|googlemail)\.com$/i.test(user.trim());
-  const host = process.env.SMTP_HOST || (isGmail ? "smtp.gmail.com" : "");
+  const host = env("SMTP_HOST") || (isGmail ? "smtp.gmail.com" : "");
   if (!host) return null;
 
   return {
     host,
-    port: Number(process.env.SMTP_PORT ?? 465),
+    port: Number(env("SMTP_PORT") ?? 465),
     user: user.trim(),
-    pass: process.env.SMTP_PASSWORD,
+    pass: env("SMTP_PASSWORD"),
   };
 }
 
@@ -71,7 +72,7 @@ function smtpConfigured(): boolean {
 }
 
 function resendConfigured(): boolean {
-  return Boolean(process.env.RESEND_API_KEY && process.env.MAIL_FROM);
+  return Boolean(env("RESEND_API_KEY") && env("MAIL_FROM"));
 }
 
 /** Modo activo, para poder avisarlo en el panel. */
@@ -90,8 +91,9 @@ export function isRealMailConfigured(): boolean {
  * rechaza: Gmail, por ejemplo, reescribe cualquier otro remitente.
  */
 function fromAddress(): string {
-  if (process.env.MAIL_FROM) return process.env.MAIL_FROM;
-  const user = process.env.SMTP_USER;
+  const from = env("MAIL_FROM");
+  if (from) return from;
+  const user = env("SMTP_USER");
   if (user) return `${siteConfig.business.name} <${user}>`;
   return ownerEmail();
 }
@@ -144,9 +146,9 @@ async function sendWithSmtp(mail: Mail): Promise<SendResult> {
 async function sendWithResend(mail: Mail): Promise<SendResult> {
   try {
     const { Resend } = await import("resend");
-    const resend = new Resend(process.env.RESEND_API_KEY);
+    const resend = new Resend(env("RESEND_API_KEY"));
     const { error } = await resend.emails.send({
-      from: process.env.MAIL_FROM!,
+      from: env("MAIL_FROM")!,
       to: mail.to,
       replyTo: ownerEmail(),
       subject: mail.subject,

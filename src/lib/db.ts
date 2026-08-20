@@ -1,5 +1,6 @@
 import { mkdirSync } from "node:fs";
 import path from "node:path";
+import { env } from "@/lib/env";
 
 /*
  * Capa de datos. Es el ÚNICO archivo que habla con la base de datos.
@@ -17,7 +18,7 @@ import path from "node:path";
  * El SQL es el mismo en ambos casos: Turso ES SQLite.
  */
 
-const DATA_DIR = process.env.DATA_DIR ?? path.join(process.cwd(), "data");
+const DATA_DIR = env("DATA_DIR") ?? path.join(process.cwd(), "data");
 const DB_PATH = path.join(DATA_DIR, "studio.db");
 
 export type BookingStatus = "pending_payment" | "confirmed" | "cancelled" | "completed";
@@ -83,7 +84,7 @@ type Driver = {
 };
 
 export function isRemoteDatabase(): boolean {
-  return Boolean(process.env.TURSO_DATABASE_URL);
+  return Boolean(env("TURSO_DATABASE_URL"));
 }
 
 /**
@@ -140,8 +141,8 @@ async function createTursoDriver(): Promise<Driver> {
   const { createClient } = await import("@libsql/client/web");
 
   const client = createClient({
-    url: tursoHttpUrl(process.env.TURSO_DATABASE_URL!),
-    authToken: process.env.TURSO_AUTH_TOKEN,
+    url: tursoHttpUrl(env("TURSO_DATABASE_URL")!),
+    authToken: env("TURSO_AUTH_TOKEN"),
   });
 
   const toRows = (result: { columns: string[]; rows: unknown[] }): Row[] =>

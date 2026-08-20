@@ -1,6 +1,7 @@
 import siteConfig from "@config";
 import type { BookingRow } from "@/lib/db";
 import { baseUrl } from "@/lib/urls";
+import { env } from "@/lib/env";
 
 /*
  * Cobro de la señal, con dos modos:
@@ -14,7 +15,7 @@ import { baseUrl } from "@/lib/urls";
  */
 
 export function isStripeConfigured(): boolean {
-  return Boolean(process.env.STRIPE_SECRET_KEY);
+  return Boolean(env("STRIPE_SECRET_KEY"));
 }
 
 export type CheckoutResult =
@@ -27,7 +28,7 @@ export async function createCheckout(booking: BookingRow): Promise<CheckoutResul
 
   try {
     const { default: Stripe } = await import("stripe");
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+    const stripe = new Stripe(env("STRIPE_SECRET_KEY")!);
 
     const base = baseUrl();
     const session = await stripe.checkout.sessions.create({
@@ -74,7 +75,7 @@ export async function verifyStripeSession(
 
   try {
     const { default: Stripe } = await import("stripe");
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+    const stripe = new Stripe(env("STRIPE_SECRET_KEY")!);
     const session = await stripe.checkout.sessions.retrieve(sessionId);
 
     if (session.metadata?.booking_code !== bookingCode) return { paid: false };

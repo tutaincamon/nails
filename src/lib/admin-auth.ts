@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
+import { env } from "@/lib/env";
 
 /*
  * Autenticación del panel: una sola contraseña, guardada en ADMIN_PASSWORD.
@@ -14,12 +15,12 @@ export const ADMIN_COOKIE = "studio_admin";
 const DEFAULT_PASSWORD = "demo1234";
 
 export function adminPassword(): string {
-  return process.env.ADMIN_PASSWORD || DEFAULT_PASSWORD;
+  return env("ADMIN_PASSWORD") || DEFAULT_PASSWORD;
 }
 
 /** true cuando se está usando la contraseña de ejemplo (avisar en pantalla). */
 export function usingDefaultPassword(): boolean {
-  return !process.env.ADMIN_PASSWORD;
+  return !env("ADMIN_PASSWORD");
 }
 
 function expectedToken(): string {

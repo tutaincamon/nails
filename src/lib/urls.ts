@@ -1,12 +1,14 @@
+import { env } from "@/lib/env";
 /** URL base pública del sitio, para los enlaces que van dentro de los emails. */
 export function baseUrl(): string {
-  const explicit = process.env.NEXT_PUBLIC_SITE_URL;
+  const explicit = env("NEXT_PUBLIC_SITE_URL");
   if (explicit) return explicit.replace(/\/$/, "");
-  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+  if (env("VERCEL_PROJECT_PRODUCTION_URL")) {
     return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
   }
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return `http://localhost:${process.env.PORT ?? 3000}`;
+  const vercelUrl = env("VERCEL_URL");
+  if (vercelUrl) return `https://${vercelUrl}`;
+  return `http://localhost:${env("PORT") ?? 3000}`;
 }
 
 /** Enlace para que la clienta vea o cancele su cita. */

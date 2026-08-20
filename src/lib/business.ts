@@ -1,4 +1,5 @@
 import siteConfig from "@config";
+import { env } from "@/lib/env";
 
 /**
  * Email de la profesional: recibe el aviso de cada reserva y es la dirección de
@@ -9,7 +10,7 @@ import siteConfig from "@config";
  * profesional: la misma copia sirve cambiando solo el entorno.
  */
 export function ownerEmail(): string {
-  return process.env.OWNER_EMAIL || siteConfig.business.ownerEmail;
+  return env("OWNER_EMAIL") || siteConfig.business.ownerEmail;
 }
 
 /**

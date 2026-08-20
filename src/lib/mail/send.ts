@@ -63,7 +63,14 @@ function smtpSettings(): { host: string; port: number; user: string; pass?: stri
     host,
     port: Number(env("SMTP_PORT") ?? 465),
     user: user.trim(),
-    pass: env("SMTP_PASSWORD"),
+    /*
+     * Se quitan TODOS los espacios, no solo los de los extremos: Google enseña
+     * las contraseñas de aplicación en cuatro grupos de cuatro ("abcd efgh
+     * ijkl mnop") y al copiarlas se pegan tal cual, pero el servidor las
+     * rechaza con un escueto "Username and Password not accepted" que no
+     * menciona los espacios por ningún lado.
+     */
+    pass: env("SMTP_PASSWORD")?.replace(/\s+/g, ""),
   };
 }
 

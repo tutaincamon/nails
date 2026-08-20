@@ -8,7 +8,10 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "reminders": "node scripts/send-reminders.mjs"
+    "reminders": "node scripts/send-reminders.mjs",
+    "captacion": "node outreach/server.mjs",
+    "dev:isis": "NEXT_PUBLIC_CLIENT_ID=isis next dev -p 3001",
+    "build:isis": "NEXT_PUBLIC_CLIENT_ID=isis next build"
   },
   "dependencies": {
     "@libsql/client": "^0.17.4",

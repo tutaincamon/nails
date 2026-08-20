@@ -3,10 +3,10 @@
 Web completa + sistema de reservas para profesionales de uñas que trabajan solas
 (estudio en casa, alquiler de sillón, autónoma a domicilio).
 
-Está pensada para **revenderse**: todo el negocio —nombre, colores, textos,
-servicios, precios, duraciones, horarios y políticas— sale de un único archivo,
-[`config/site.config.ts`](config/site.config.ts). Para una clienta nueva se copia
-el proyecto, se edita ese archivo y ya está.
+Está pensada para **revenderse**: todo el negocio —nombre, colores, logotipo,
+textos, servicios, precios, duraciones, horarios y políticas— sale de un archivo
+por profesional en [`config/clients/`](config/clients). Un mismo código sirve a
+todas; cada una se despliega por separado y con su propia base de datos.
 
 ## Qué incluye
 
@@ -52,27 +52,52 @@ Sin claves de terceros, dos cosas funcionan «en seco» para poder probar todo:
 Cada modo se activa solo según las variables de entorno. Cuando pongas
 `STRIPE_SECRET_KEY`, la pantalla de pago simulado se desactiva por completo.
 
-## Personalizar para otra profesional
+## Varias profesionales, un mismo código
 
-Todo está en [`config/site.config.ts`](config/site.config.ts), comentado en
-castellano:
+Cada profesional tiene su archivo en `config/clients/`. La web muestra una u
+otra según la variable `NEXT_PUBLIC_CLIENT_ID`:
+
+```
+config/
+  site.config.ts        elige cuál se muestra
+  clients/
+    appflu.ts           la web general del producto (por defecto)
+    isis.ts             Isis Nails · Las Palmas
+```
+
+Cada una se despliega como **su propio proyecto de Vercel, con su propia base
+de datos y su propio dominio**. Nunca comparten datos: eso es lo que hace
+imposible que las clientas de una acaben viéndose en la agenda de otra.
+
+```bash
+npm run dev        # Appflu, en el puerto 3000
+npm run dev:isis   # Isis, en el puerto 3001
+```
+
+### Dar de alta a una nueva
+
+1. Copia `config/clients/appflu.ts` y cámbiale lo suyo.
+2. Regístrala en la lista `clients` de `config/site.config.ts`.
+3. Crea su proyecto en Vercel desde este mismo repositorio, con
+   `NEXT_PUBLIC_CLIENT_ID=<su id>` y su propia base de datos de Turso.
+
+Si el identificador está mal escrito, **el despliegue falla a propósito**: es
+preferible a que la web de una profesional acabe mostrando la marca de otra sin
+que nadie se dé cuenta.
+
+### Qué lleva el archivo de cada una
 
 | Sección | Qué controla |
 |---|---|
-| `business` | Nombre, lema, teléfono, WhatsApp, Instagram, zona, email de avisos, zona horaria |
-| `theme` | 8 colores. Cambiándolos cambia el estilo de la web y de los emails |
-| `booking` | Intervalo de huecos, minutos de limpieza, antelación mínima, días vista, plazo de cancelación |
-| `deposit` | Señal: activada o no, importe fijo o porcentaje, si se permite pagar en el estudio |
-| `hours` | Horario de cada día de la semana, con descansos |
-| `closedDates` | Vacaciones y festivos |
-| `categories` | Servicios: nombre, precio, duración, descripción, «desde», y extras por categoría |
-| `content` | Textos: pasos, sobre mí, opiniones, dudas frecuentes, avisos previos a la cita |
+| `business` | Nombre, lema, logotipo, zona, teléfono, WhatsApp, Instagram, TikTok. Los de contacto vacíos se ocultan solos |
+| `theme` | 8 colores. Cambiándolos cambia la web y los emails |
+| `gallery` | Fotos de trabajos. Con tres, la galería les da una fila entera |
+| `booking` · `deposit` · `hours` | Reglas de la agenda, señal y horario |
+| `categories` | Servicios: nombre, precio, duración, extras |
+| `content` | Textos: sobre el estudio, dudas frecuentes, avisos previos |
 
-Las **fotos** son ilustraciones SVG generadas por código
-([`src/components/NailArt.tsx`](src/components/NailArt.tsx)), así que la web se ve
-terminada sin subir ninguna imagen. Cuando la profesional tenga sus fotos, se
-sustituye `<NailSwatch>` por `<Image>` en la galería de
-[`src/app/page.tsx`](src/app/page.tsx).
+Un archivo de cliente puede partir de otro y cambiar solo lo suyo, como hace
+`isis.ts`: así hereda las mejoras del producto sin tener que tocarlas dos veces.
 
 La duración de cada servicio es lo que hace que la agenda cuadre: si un
 babyboomer se tarda 3 h, hay que poner `durationMin: 180` y el sistema dejará de

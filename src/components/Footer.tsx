@@ -12,7 +12,7 @@ export function Footer() {
         <div className="lg:col-span-2">
           <p className="font-display text-2xl text-ink">{business.name}</p>
           <p className="mt-2 max-w-sm text-[14px] leading-relaxed text-muted">{business.intro}</p>
-          {(business.whatsapp || business.instagram) && (
+          {(business.whatsapp || business.instagram || business.tiktok) && (
             <div className="mt-5 flex flex-wrap gap-3">
               {business.whatsapp && (
                 <a
@@ -31,7 +31,17 @@ export function Footer() {
                   rel="noopener noreferrer"
                   className="btn-ghost btn-sm"
                 >
-                  @{business.instagram}
+                  Instagram
+                </a>
+              )}
+              {business.tiktok && (
+                <a
+                  href={`https://tiktok.com/@${business.tiktok}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-ghost btn-sm"
+                >
+                  TikTok
                 </a>
               )}
             </div>

@@ -6,6 +6,9 @@ build/
 # Datos del negocio: reservas reales y emails. Nunca al repositorio.
 data/
 
+# Lista de contactos de la campaña de captación: datos de terceros.
+outreach/data/
+
 .env
 .env.local
 .env*.local
@@ -18,3 +21,6 @@ next-env.d.ts
 
 # Configuración local de servidores MCP: no forma parte del producto.
 .mcp.json
+
+# Herramienta de captación: método comercial propio, no parte del producto.
+outreach/

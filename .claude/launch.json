@@ -4,8 +4,29 @@
     {
       "name": "web",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 3000
+    },
+    {
+      "name": "captacion",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "captacion"
+      ],
+      "port": 4321
+    },
+    {
+      "name": "isis",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev:isis"
+      ],
+      "port": 3001
     }
   ]
 }

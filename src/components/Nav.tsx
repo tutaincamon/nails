@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -41,13 +42,38 @@ export function Nav() {
         }`}
       >
         <nav className="section flex h-[72px] items-center justify-between gap-4">
-          <Link
-            href="/"
-            className={`text-[15px] font-bold uppercase tracking-[0.28em] transition-colors ${
-              overlay ? "text-white" : "text-ink"
-            }`}
-          >
-            {business.name}
+          <Link href="/" className="flex items-center gap-3">
+            {business.logo ? (
+              <>
+                {/* El logotipo llega en JPG con fondo blanco, así que se recorta
+                    en círculo: sobre el fondo hueso un cuadrado blanco cantaría. */}
+                <span className="relative block h-11 w-11 overflow-hidden rounded-full bg-white">
+                  <Image
+                    src={business.logo}
+                    alt={business.logoAlt || business.name}
+                    fill
+                    sizes="44px"
+                    className="object-cover"
+                    priority
+                  />
+                </span>
+                <span
+                  className={`hidden text-[13px] font-bold uppercase tracking-[0.24em] transition-colors sm:inline ${
+                    overlay ? "text-white" : "text-ink"
+                  }`}
+                >
+                  {business.name}
+                </span>
+              </>
+            ) : (
+              <span
+                className={`text-[15px] font-bold uppercase tracking-[0.28em] transition-colors ${
+                  overlay ? "text-white" : "text-ink"
+                }`}
+              >
+                {business.name}
+              </span>
+            )}
           </Link>
 
           <div className="hidden items-center gap-9 md:flex">

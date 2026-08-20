@@ -24,6 +24,8 @@ export default async function HomePage() {
   const hours = formatDayHours();
   const gallery = siteConfig.gallery;
   const hero = gallery[0] ?? null;
+  // Con solo tres fotos merece la pena darles una fila entera para ellas.
+  const trio = gallery.length === 3;
 
   return (
     <>
@@ -87,27 +89,37 @@ export default async function HomePage() {
           </Reveal>
 
           {/*
-            Dos columnas desiguales: la derecha baja para que las fotos no
-            queden alineadas en filas. Cada una aparece al entrar en pantalla.
+            La rejilla se adapta al número de fotos. Con tres van en fila y
+            mandan todas por igual; con más, dos columnas y una de cada dos
+            baja un poco, que es lo que evita el aspecto de catálogo.
           */}
-          <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 lg:gap-x-16 lg:gap-y-20">
-            {gallery.map((photo, index) => (
-              <Reveal
-                key={photo.src}
-                delay={(index % 2) * 90}
-                className={index % 2 === 1 ? "sm:mt-24 lg:mt-32" : ""}
-              >
-                <figure className="group relative aspect-[3/4] overflow-hidden bg-line/40">
-                  <Image
-                    src={photo.src}
-                    alt={photo.alt}
-                    fill
-                    sizes="(max-width: 640px) 100vw, 45vw"
-                    className="object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.04]"
-                  />
-                </figure>
-              </Reveal>
-            ))}
+          <div
+            className={
+              trio
+                ? "grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-3 lg:gap-x-10"
+                : "grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 lg:gap-x-16 lg:gap-y-20"
+            }
+          >
+            {gallery.map((photo, index) => {
+              const baja = trio ? index === 1 : index % 2 === 1;
+              return (
+                <Reveal
+                  key={photo.src}
+                  delay={(index % 3) * 110}
+                  className={baja ? (trio ? "sm:mt-14 lg:mt-20" : "sm:mt-24 lg:mt-32") : ""}
+                >
+                  <figure className="group relative aspect-[3/4] overflow-hidden bg-line/40">
+                    <Image
+                      src={photo.src}
+                      alt={photo.alt}
+                      fill
+                      sizes={trio ? "(max-width: 640px) 100vw, 31vw" : "(max-width: 640px) 100vw, 45vw"}
+                      className="object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.04]"
+                    />
+                  </figure>
+                </Reveal>
+              );
+            })}
           </div>
         </div>
       </section>

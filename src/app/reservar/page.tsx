@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import siteConfig from "@config";
 import { BookingWizard } from "@/components/BookingWizard";
+import { PreviewNote } from "@/components/PreviewNote";
 
 export const metadata: Metadata = {
   title: "Reservar cita",
@@ -19,6 +20,7 @@ export default function ReservarPage() {
             Elige servicio, día y hora. Recibirás la confirmación por email al momento y un
             recordatorio el día antes.
           </p>
+          <PreviewNote className="mt-6 max-w-xl" />
         </div>
       </div>
 

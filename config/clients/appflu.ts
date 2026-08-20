@@ -132,6 +132,17 @@ export const appflu = {
   },
 
   /* ---------------------------------------------------------------------- */
+  /*  MODO MUESTRA                                                          */
+  /*  Para enseñarle la web a una profesional antes de tener sus datos      */
+  /*  reales. Avisa de que la tarifa es de ejemplo, sin que la web parezca  */
+  /*  a medio hacer. Se apaga poniendo enabled en false.                    */
+  /* ---------------------------------------------------------------------- */
+  preview: {
+    enabled: false,
+    note: "",
+  },
+
+  /* ---------------------------------------------------------------------- */
   /*  3. REGLAS DE LA AGENDA                                                */
   /* ---------------------------------------------------------------------- */
   booking: {

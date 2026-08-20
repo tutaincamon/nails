@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import siteConfig from "@config";
+import { PreviewNote } from "@/components/PreviewNote";
 import { Reveal } from "@/components/Reveal";
 import { ServiceMenu } from "@/components/ServiceMenu";
 import { formatDayHours } from "@/components/hours-text";
@@ -74,6 +75,7 @@ export default async function HomePage() {
           </header>
         </Reveal>
         <Reveal delay={80}>
+          <PreviewNote className="mb-6" />
           <ServiceMenu />
         </Reveal>
       </section>

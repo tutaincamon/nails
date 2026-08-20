@@ -50,6 +50,16 @@ export const isis = {
     accent: "#e8a5bd",
   },
 
+  /*
+   * Encendido hasta que ella pase su lista real de servicios, precios y
+   * horarios. Sin este aviso, una clienta suya podría reservar a una tarifa
+   * que no es la suya, y el problema lo tendría ella delante.
+   */
+  preview: {
+    enabled: true,
+    note: "Tarifa y horario de ejemplo: se sustituyen por los tuyos antes de publicar la web.",
+  },
+
   gallery: [
     {
       src: "/isis/frances-flor.jpg",

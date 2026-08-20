@@ -40,6 +40,13 @@ export async function GET() {
     // un envío puede quedarse a medias por faltar solo la contraseña.
     smtpUsuarioPuesto: Boolean(env("SMTP_USER")),
     smtpContrasenaPuesta: Boolean(env("SMTP_PASSWORD")),
+    /*
+     * Longitud y si trae espacios. No revela la contraseña, y distingue las dos
+     * confusiones habituales: pegarla en los cuatro grupos en que la enseña
+     * Google, o haber pegado otra cosa. Una de aplicación son 16 caracteres.
+     */
+    smtpContrasenaLongitud: (env("SMTP_PASSWORD") ?? "").replace(/\s+/g, "").length,
+    smtpContrasenaConEspacios: /\s/.test(env("SMTP_PASSWORD") ?? ""),
     remitentePuesto: Boolean(env("MAIL_FROM")),
     ownerEmailPuesto: Boolean(process.env.OWNER_EMAIL),
     adminPasswordPuesta: Boolean(process.env.ADMIN_PASSWORD),

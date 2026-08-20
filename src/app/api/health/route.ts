@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { bookingsOn, isRemoteDatabase, recentEmails } from "@/lib/db";
 import { env } from "@/lib/env";
@@ -17,6 +18,16 @@ export const dynamic = "force-dynamic";
  * valor. Los mensajes de error se limpian de posibles credenciales antes de
  * salir, por si el cliente de la base de datos las incluyera.
  */
+
+/**
+ * Huella corta de un valor, para poder comparar dos despliegues sin ver el
+ * valor en sí. Dos webs con la misma huella usan la misma cuenta; con huellas
+ * distintas, cuentas distintas. Es irreversible: de aquí no se saca el valor.
+ */
+function fingerprint(value: string | undefined): string | null {
+  if (!value) return null;
+  return createHash("sha256").update(value.trim().toLowerCase()).digest("hex").slice(0, 10);
+}
 
 /** Oculta cadenas largas que puedan ser credenciales dentro de un error. */
 function redact(text: string): string {
@@ -47,6 +58,8 @@ export async function GET() {
      */
     smtpContrasenaLongitud: (env("SMTP_PASSWORD") ?? "").replace(/\s+/g, "").length,
     smtpContrasenaConEspacios: /\s/.test(env("SMTP_PASSWORD") ?? ""),
+    huellaUsuario: fingerprint(env("SMTP_USER")),
+    huellaContrasena: fingerprint((env("SMTP_PASSWORD") ?? "").replace(/\s+/g, "")),
     remitentePuesto: Boolean(env("MAIL_FROM")),
     ownerEmailPuesto: Boolean(process.env.OWNER_EMAIL),
     adminPasswordPuesta: Boolean(process.env.ADMIN_PASSWORD),

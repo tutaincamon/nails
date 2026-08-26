@@ -44,7 +44,7 @@ export default async function BookingPage({ params, searchParams }: Props) {
   if (sessionId && booking.deposit_status !== "paid") {
     const verified = await verifyStripeSession(sessionId, code);
     if (verified.paid) {
-      await confirmDeposit(code, verified.ref!);
+      await confirmDeposit(code, verified.ref!, verified.card);
       booking = (await getBooking(code))!;
     }
   }

@@ -1,5 +1,12 @@
 import siteConfig, { type TimeRange } from "@config";
-import { blocksBetween, bookingsBetween, type BlockRow, type BookingRow } from "@/lib/db";
+import {
+  blocksBetween,
+  bookingsBetween,
+  getWeeklyHours,
+  type BlockRow,
+  type BookingRow,
+  type WeeklyHours,
+} from "@/lib/db";
 import {
   addDays,
   daysBetween,
@@ -35,10 +42,25 @@ export type DayAvailability = {
 
 type Interval = { start: number; end: number };
 
-/** Franjas de trabajo de un día según el horario semanal. */
-export function workingRanges(date: string): TimeRange[] {
+/**
+ * Horario que manda de verdad: el que la profesional haya guardado en el panel
+ * y, si no ha tocado nada, el del archivo de configuración.
+ */
+export async function effectiveHours(): Promise<WeeklyHours> {
+  try {
+    return (await getWeeklyHours()) ?? siteConfig.hours;
+  } catch (error) {
+    // Si la base de datos no responde, es preferible el horario de la
+    // configuración a dejar la agenda entera cerrada.
+    console.error("[agenda] No se pudo leer el horario guardado:", error);
+    return siteConfig.hours;
+  }
+}
+
+/** Franjas de trabajo de un día, dado el horario ya resuelto. */
+export function workingRanges(date: string, hours: WeeklyHours): TimeRange[] {
   if (siteConfig.closedDates.includes(date)) return [];
-  return siteConfig.hours[weekdayOf(date)] ?? [];
+  return hours[weekdayOf(date)] ?? [];
 }
 
 /** Intervalos ocupados de un día, en minutos desde medianoche. */
@@ -82,9 +104,11 @@ export async function availabilityRange(
 
   const now = nowInBusinessTz();
   const lastDate = addDays(fromDate, Math.max(0, days - 1));
-  const [bookings, blocks] = await Promise.all([
+  // El horario se lee una sola vez para todo el rango, no una por día.
+  const [bookings, blocks, hours] = await Promise.all([
     bookingsBetween(fromDate, lastDate),
     blocksBetween(fromDate, lastDate),
+    effectiveHours(),
   ]);
 
   const result: DayAvailability[] = [];
@@ -102,7 +126,7 @@ export async function availabilityRange(
       continue;
     }
 
-    const ranges = workingRanges(date);
+    const ranges = workingRanges(date, hours);
     if (ranges.length === 0) {
       result.push({ date, closed: true, closedReason: "Cerrado", slots: [] });
       continue;

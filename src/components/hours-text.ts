@@ -1,4 +1,4 @@
-import siteConfig from "@config";
+import type { WeeklyHours } from "@/lib/db";
 
 const DAY_NAMES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 const ORDER = [1, 2, 3, 4, 5, 6, 0];
@@ -6,12 +6,15 @@ const ORDER = [1, 2, 3, 4, 5, 6, 0];
 export type HoursRow = { label: string; hours: string; closed: boolean };
 
 /**
- * Convierte el horario de la configuración en filas legibles, agrupando los
- * días seguidos que tienen el mismo horario ("Lunes – Jueves  10:00–14:00…").
+ * Convierte un horario semanal en filas legibles, agrupando los días seguidos
+ * que tienen el mismo horario ("Lunes – Jueves  10:00–14:00…").
+ *
+ * Recibe el horario en vez de leerlo de la configuración porque desde que se
+ * puede editar en el panel, el de la configuración es solo el valor inicial.
  */
-export function formatDayHours(): HoursRow[] {
+export function formatDayHours(hours: WeeklyHours): HoursRow[] {
   const describe = (day: number) => {
-    const ranges = siteConfig.hours[day] ?? [];
+    const ranges = hours[day] ?? [];
     if (ranges.length === 0) return "Cerrado";
     return ranges.map((r) => `${r.start}–${r.end}`).join(" · ");
   };

@@ -62,7 +62,7 @@ export function ServiceMenu() {
                   </p>
                 )}
                 <p className="mt-1 text-[13px] text-muted/80">
-                  {formatDuration(service.durationMin)} en el estudio
+                  {formatDuration(service.durationMin)} {siteConfig.venue.where}
                 </p>
               </div>
 

@@ -9,7 +9,12 @@ import siteConfig from "@config";
 const links = [
   { href: "/#servicios", label: "Servicios" },
   { href: "/#trabajos", label: "Trabajos" },
-  { href: "/#estudio", label: "Estudio" },
+  // El ancla sigue siendo #estudio: es el id de la sección, no lo que se lee.
+  { href: "/#estudio", label: siteConfig.venue.sectionTitle },
+  // La sección de opiniones solo existe si hay reseñas, así que el enlace también.
+  ...(siteConfig.content.testimonials.length > 0
+    ? [{ href: "/#opiniones", label: "Opiniones" }]
+    : []),
   { href: "/#dudas", label: "Dudas" },
 ];
 

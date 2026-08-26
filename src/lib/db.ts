@@ -41,6 +41,8 @@ export type BookingRow = {
   client_name: string;
   client_email: string;
   client_phone: string;
+  /** Dónde vive la clienta. Solo se pide cuando la profesional va a su casa. */
+  client_address: string;
   notes: string;
   deposit_cents: number;
   deposit_status: DepositStatus;
@@ -48,6 +50,22 @@ export type BookingRow = {
   manage_token: string;
   reminder_sent_at: string | null;
   cancelled_at: string | null;
+
+  /* --- Tarjeta guardada para cobrar plantones -------------------------- */
+  /*
+   * Aquí NO hay ningún dato de tarjeta. Son referencias de Stripe: sirven para
+   * cobrar en esa cuenta de Stripe y no valen para nada fuera de ella. El
+   * número lo pide y lo guarda Stripe, nunca este servidor.
+   */
+  stripe_customer_id: string;
+  card_payment_method: string;
+  /** Para que ella vea de qué tarjeta habla: "visa ···· 4242". */
+  card_label: string;
+  /** Cuándo aceptó la política de cancelación. Es la prueba para cobrar. */
+  policy_accepted_at: string | null;
+  /** Importe ya cobrado por no presentarse, si se ha llegado a cobrar. */
+  no_show_cents: number;
+  no_show_ref: string | null;
 };
 
 export type BlockRow = {
@@ -221,13 +239,20 @@ const SCHEMA = `
     client_name      TEXT NOT NULL,
     client_email     TEXT NOT NULL,
     client_phone     TEXT NOT NULL,
+    client_address   TEXT NOT NULL DEFAULT '',
     notes            TEXT NOT NULL DEFAULT '',
     deposit_cents    INTEGER NOT NULL DEFAULT 0,
     deposit_status   TEXT NOT NULL DEFAULT 'none',
     payment_ref      TEXT,
     manage_token     TEXT NOT NULL,
     reminder_sent_at TEXT,
-    cancelled_at     TEXT
+    cancelled_at     TEXT,
+    stripe_customer_id  TEXT NOT NULL DEFAULT '',
+    card_payment_method TEXT NOT NULL DEFAULT '',
+    card_label          TEXT NOT NULL DEFAULT '',
+    policy_accepted_at  TEXT,
+    no_show_cents       INTEGER NOT NULL DEFAULT 0,
+    no_show_ref         TEXT
   );
 
   CREATE INDEX IF NOT EXISTS idx_bookings_date ON bookings (date, status);
@@ -254,10 +279,39 @@ const SCHEMA = `
     booking_code TEXT,
     error        TEXT
   );
+
+  CREATE TABLE IF NOT EXISTS weekly_hours (
+    weekday     INTEGER PRIMARY KEY,
+    ranges_json TEXT NOT NULL
+  );
 `;
+
+/**
+ * Columnas añadidas después de que hubiera bases de datos en producción.
+ * CREATE TABLE IF NOT EXISTS no toca una tabla que ya existe, así que sin esto
+ * un despliegue antiguo se quedaría sin la columna y fallaría al guardar.
+ */
+const ADDED_COLUMNS: { table: string; column: string; ddl: string }[] = [
+  { table: "bookings", column: "client_address", ddl: "TEXT NOT NULL DEFAULT ''" },
+  { table: "bookings", column: "stripe_customer_id", ddl: "TEXT NOT NULL DEFAULT ''" },
+  { table: "bookings", column: "card_payment_method", ddl: "TEXT NOT NULL DEFAULT ''" },
+  { table: "bookings", column: "card_label", ddl: "TEXT NOT NULL DEFAULT ''" },
+  { table: "bookings", column: "policy_accepted_at", ddl: "TEXT" },
+  { table: "bookings", column: "no_show_cents", ddl: "INTEGER NOT NULL DEFAULT 0" },
+  { table: "bookings", column: "no_show_ref", ddl: "TEXT" },
+];
 
 async function migrate(instance: Driver) {
   await instance.script(SCHEMA);
+
+  for (const { table, column, ddl } of ADDED_COLUMNS) {
+    const columns = await instance.all(`PRAGMA table_info(${table})`);
+    const exists = columns.some((row) => row.name === column);
+    if (!exists) {
+      await instance.run(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
+      console.info(`[bbdd] Columna añadida: ${table}.${column}`);
+    }
+  }
 }
 
 /* -------------------------------------------------------------------------- */
@@ -304,17 +358,31 @@ export async function getBooking(code: string): Promise<BookingRow | null> {
   return (await db.get("SELECT * FROM bookings WHERE code = ?", [code])) as BookingRow | null;
 }
 
+/*
+ * Los campos que no se piden aquí los pone la propia tabla con su valor por
+ * defecto: se rellenan después (la tarjeta al pagar, el plantón al cobrarlo).
+ */
 export async function insertBooking(
-  row: Omit<BookingRow, "reminder_sent_at" | "cancelled_at">,
+  row: Omit<
+    BookingRow,
+    | "reminder_sent_at"
+    | "cancelled_at"
+    | "stripe_customer_id"
+    | "card_payment_method"
+    | "card_label"
+    | "policy_accepted_at"
+    | "no_show_cents"
+    | "no_show_ref"
+  >,
 ): Promise<void> {
   const db = await driver();
   await db.run(
     `INSERT INTO bookings (
       code, created_at, status, service_id, service_name, category_name, addons_json,
       price_cents, price_from, duration_min, date, start_time, end_time,
-      client_name, client_email, client_phone, notes,
+      client_name, client_email, client_phone, client_address, notes,
       deposit_cents, deposit_status, payment_ref, manage_token
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [
       row.code,
       row.created_at,
@@ -332,6 +400,7 @@ export async function insertBooking(
       row.client_name,
       row.client_email,
       row.client_phone,
+      row.client_address,
       row.notes,
       row.deposit_cents,
       row.deposit_status,
@@ -397,6 +466,103 @@ export async function addBlock(
 export async function deleteBlock(id: number): Promise<void> {
   const db = await driver();
   await db.run("DELETE FROM blocks WHERE id = ?", [id]);
+}
+
+/**
+ * Guarda las referencias de Stripe de la tarjeta que la clienta dejó al pagar
+ * la señal. Solo identificadores: ningún dato de tarjeta llega hasta aquí.
+ */
+export async function saveCardOnFile(
+  code: string,
+  customerId: string,
+  paymentMethodId: string,
+  label: string,
+): Promise<void> {
+  const db = await driver();
+  await db.run(
+    `UPDATE bookings
+     SET stripe_customer_id = ?, card_payment_method = ?, card_label = ?
+     WHERE code = ?`,
+    [customerId, paymentMethodId, label, code],
+  );
+}
+
+/** Marca cuándo aceptó la política de cancelación. */
+export async function markPolicyAccepted(code: string, when: string): Promise<void> {
+  const db = await driver();
+  await db.run("UPDATE bookings SET policy_accepted_at = ? WHERE code = ?", [when, code]);
+}
+
+/** Registra el cobro por no presentarse, para que no se cobre dos veces. */
+export async function markNoShowCharged(
+  code: string,
+  cents: number,
+  ref: string,
+): Promise<void> {
+  const db = await driver();
+  await db.run("UPDATE bookings SET no_show_cents = ?, no_show_ref = ? WHERE code = ?", [
+    cents,
+    ref,
+    code,
+  ]);
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Horario semanal                                                           */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * El horario vivía solo en el archivo de configuración, así que cambiarlo era
+ * tocar código y volver a desplegar. Para quien no tiene horario fijo eso no
+ * sirve: necesita cambiarlo desde el panel.
+ *
+ * La tabla manda cuando tiene filas; si está vacía, se usa el de la
+ * configuración. Así los despliegues que ya funcionaban siguen igual y nadie
+ * tiene que rellenar nada para que su web siga comportándose como antes.
+ */
+
+export type WeeklyHours = Record<number, { start: string; end: string }[]>;
+
+/** Horario guardado en el panel, o null si nunca se ha tocado. */
+export async function getWeeklyHours(): Promise<WeeklyHours | null> {
+  const db = await driver();
+  const rows = await db.all("SELECT weekday, ranges_json FROM weekly_hours");
+  if (rows.length === 0) return null;
+
+  const hours: WeeklyHours = {};
+  for (let day = 0; day < 7; day++) hours[day] = [];
+
+  for (const row of rows) {
+    const day = Number(row.weekday);
+    if (!Number.isInteger(day) || day < 0 || day > 6) continue;
+    try {
+      const parsed = JSON.parse(String(row.ranges_json));
+      if (Array.isArray(parsed)) hours[day] = parsed;
+    } catch {
+      // Una fila corrupta deja ese día cerrado en vez de tumbar la agenda entera.
+      console.error(`[bbdd] Horario ilegible para el día ${day}`);
+    }
+  }
+
+  return hours;
+}
+
+/** Guarda los 7 días de una vez. Sustituye por completo lo que hubiera. */
+export async function saveWeeklyHours(hours: WeeklyHours): Promise<void> {
+  const db = await driver();
+  await db.run("DELETE FROM weekly_hours");
+  for (let day = 0; day < 7; day++) {
+    await db.run("INSERT INTO weekly_hours (weekday, ranges_json) VALUES (?,?)", [
+      day,
+      JSON.stringify(hours[day] ?? []),
+    ]);
+  }
+}
+
+/** Vuelve al horario del archivo de configuración. */
+export async function resetWeeklyHours(): Promise<void> {
+  const db = await driver();
+  await db.run("DELETE FROM weekly_hours");
 }
 
 export async function logEmail(row: Omit<EmailRow, "id" | "created_at">): Promise<void> {

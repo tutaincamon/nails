@@ -29,7 +29,7 @@ export function BookingWizard() {
     deposit.enabled ? "deposit" : "on_site",
   );
 
-  const [form, setForm] = useState({ name: "", email: "", phone: "", notes: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", address: "", notes: "" });
   const [accepted, setAccepted] = useState(false);
 
   const [weekStart, setWeekStart] = useState<string>(() => todayISO());
@@ -116,6 +116,7 @@ export function BookingWizard() {
           name: form.name,
           email: form.email,
           phone: form.phone,
+          address: form.address,
           notes: form.notes,
           payment,
         }),
@@ -374,6 +375,30 @@ export function BookingWizard() {
                 />
               </div>
 
+              {/*
+                Solo cuando es la profesional quien se desplaza. En un estudio
+                la dirección de la clienta no pinta nada y no se le pide.
+              */}
+              {siteConfig.venue.needsClientAddress && (
+                <div className="sm:col-span-2">
+                  <label className="label" htmlFor="address">
+                    {siteConfig.venue.addressLabel}
+                  </label>
+                  <textarea
+                    id="address"
+                    rows={2}
+                    className={`field resize-y ${errorField === "address" ? "field-error" : ""}`}
+                    value={form.address}
+                    autoComplete="street-address"
+                    onChange={(e) => setForm({ ...form, address: e.target.value })}
+                    placeholder="Calle Mayor 12, 3º B, Getafe"
+                  />
+                  <p className="mt-1.5 text-[12.5px] leading-relaxed text-muted">
+                    {siteConfig.venue.addressHint}
+                  </p>
+                </div>
+              )}
+
               <div className="sm:col-span-2">
                 <label className="label" htmlFor="notes">
                   ¿Algo que deba saber? <span className="font-normal text-muted">(opcional)</span>
@@ -409,6 +434,9 @@ export function BookingWizard() {
               <Row label="A nombre de" value={form.name} />
               <Row label="Email" value={form.email} />
               <Row label="Teléfono" value={form.phone} />
+              {form.address.trim() && (
+                <Row label={siteConfig.venue.addressLabel} value={form.address.trim()} />
+              )}
               {form.notes.trim() && <Row label="Nota" value={form.notes.trim()} />}
             </dl>
 
@@ -420,13 +448,13 @@ export function BookingWizard() {
                     checked={payment === "deposit"}
                     onChange={() => setPayment("deposit")}
                     title={`Señal de ${formatCents(current.depositCents)} ahora`}
-                    description={`Confirmas el hueco al instante. Se descuenta del precio final: el resto (${formatCents(current.totalCents - current.depositCents)}${current.isFrom ? " o más según el diseño" : ""}) se paga en el estudio.`}
+                    description={`Confirmas el hueco al instante. Se descuenta del precio final: el resto (${formatCents(current.totalCents - current.depositCents)}${current.isFrom ? " o más según el diseño" : ""}) se paga ${siteConfig.venue.payWhere}.`}
                   />
                   {deposit.allowPayOnSite && (
                     <PaymentOption
                       checked={payment === "on_site"}
                       onChange={() => setPayment("on_site")}
-                      title="Pagar todo en el estudio"
+                      title={`Pagar todo ${siteConfig.venue.payWhere}`}
                       description="La cita queda reservada igual. Te pido que avises si no puedes venir, para poder dar el hueco."
                     />
                   )}
@@ -446,6 +474,16 @@ export function BookingWizard() {
                 He leído las condiciones: puedo cancelar sin coste hasta{" "}
                 {bookingRules.cancellationHours} h antes, y si llego con mucho retraso quizá haya que
                 simplificar el diseño o mover la cita.
+                {/*
+                  Con la política de plantones encendida esto deja de ser un
+                  formalismo: es lo que autoriza el cobro, así que se dice
+                  entero y con el importe delante, no escondido en un enlace.
+                */}
+                {siteConfig.noShow.enabled && siteConfig.noShow.terms && (
+                  <strong className="mt-2 block font-medium text-ink">
+                    {siteConfig.noShow.terms}
+                  </strong>
+                )}
               </span>
             </label>
           </div>
@@ -547,8 +585,8 @@ export function BookingWizard() {
               {deposit.enabled && current.depositCents > 0 && (
                 <p className="mt-4 bg-bg px-3 py-2.5 text-[12.5px] leading-relaxed text-muted">
                   {payment === "deposit"
-                    ? `Ahora pagas ${formatCents(current.depositCents)} de señal; el resto en el estudio.`
-                    : "Pagarás el importe completo en el estudio."}
+                    ? `Ahora pagas ${formatCents(current.depositCents)} de señal; el resto ${siteConfig.venue.payWhere}.`
+                    : `Pagarás el importe completo ${siteConfig.venue.payWhere}.`}
                 </p>
               )}
 

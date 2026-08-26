@@ -55,7 +55,14 @@ export default async function PaymentPage({ params, searchParams }: Props) {
         <strong className="font-semibold text-ink">
           {formatDateLong(booking.date)} a las {booking.start_time}
         </strong>
-        . En cuanto se abone la señal, la cita queda confirmada y te llega el email con la dirección.
+        . En cuanto se abone la señal, la cita queda confirmada y te llega el email de
+        confirmación.
+        {/*
+          Antes decía "el email con la dirección", que solo tiene sentido cuando
+          la clienta va al estudio. A domicilio la dirección la pone ella, así
+          que prometerle una dirección por email sobra.
+        */}
+        {!siteConfig.venue.needsClientAddress && " Ahí va también la dirección."}
       </p>
 
       {cancelado && (
@@ -78,7 +85,7 @@ export default async function PaymentPage({ params, searchParams }: Props) {
       </div>
 
       <p className="mt-6 text-[13px] leading-relaxed text-muted">
-        {siteConfig.deposit.note} Si prefieres pagarlo todo en el estudio, {contactSentence()}.
+        {siteConfig.deposit.note} Si prefieres pagarlo todo {siteConfig.venue.payWhere}, {contactSentence()}.
       </p>
     </div>
   );

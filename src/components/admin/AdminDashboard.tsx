@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import siteConfig from "@config";
-import type { BlockRow, BookingRow, BookingStatus } from "@/lib/db";
+import type { BlockRow, BookingRow, BookingStatus, WeeklyHours } from "@/lib/db";
 import { formatCents } from "@/lib/money";
 import { addDays, formatDateLong, formatDuration } from "@/lib/time";
 import { StatusBadge, capitalize, parseAddOns } from "@/components/BookingDetails";
@@ -27,18 +27,23 @@ type Props = {
   stats: Stats;
   bookings: BookingRow[];
   blocks: BlockRow[];
+  /** Horario que rige ahora mismo: el guardado aquí, o el de la configuración. */
+  hours: WeeklyHours;
+  /** true si se ha editado desde el panel (y por tanto se puede deshacer). */
+  hoursAreCustom: boolean;
   emails: EmailSummary[];
   mailMode: "real" | "simulado";
   paymentMode: "stripe" | "demo";
   usingDefaultPassword: boolean;
 };
 
-type Tab = "resumen" | "proximas" | "historico" | "agenda" | "emails";
+type Tab = "resumen" | "proximas" | "historico" | "horario" | "agenda" | "emails";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "resumen", label: "Resumen" },
   { id: "proximas", label: "Próximas citas" },
   { id: "historico", label: "Histórico" },
+  { id: "horario", label: "Mi horario" },
   { id: "agenda", label: "Bloquear horas" },
   { id: "emails", label: "Emails" },
 ];
@@ -156,6 +161,9 @@ export function AdminDashboard(props: Props) {
         {tab === "historico" && (
           <BookingList bookings={history} emptyText="Todavía no hay histórico." />
         )}
+        {tab === "horario" && (
+          <ScheduleTab hours={props.hours} isCustom={props.hoursAreCustom} />
+        )}
         {tab === "agenda" && <BlocksTab blocks={props.blocks} today={props.today} />}
         {tab === "emails" && <EmailsTab emails={props.emails} mailMode={props.mailMode} />}
       </div>
@@ -232,6 +240,7 @@ function BookingList({ bookings, emptyText }: { bookings: BookingRow[]; emptyTex
 function BookingCard({ booking }: { booking: BookingRow }) {
   const router = useRouter();
   const [working, setWorking] = useState(false);
+  const [noShowError, setNoShowError] = useState<string | null>(null);
   const addOns = parseAddOns(booking.addons_json);
 
   async function setStatus(status: BookingStatus) {
@@ -242,6 +251,35 @@ function BookingCard({ booking }: { booking: BookingRow }) {
       body: JSON.stringify({ status }),
     });
     setWorking(false);
+    router.refresh();
+  }
+
+  /** La cita ya pasó: hasta entonces la clienta todavía puede aparecer. */
+  const isPast = new Date(`${booking.date}T${booking.end_time}`) < new Date();
+
+  async function chargeNoShow() {
+    const percent = siteConfig.noShow.chargePercent;
+    const amount = Math.round((booking.price_cents * percent) / 100) - booking.deposit_cents;
+    const confirmed = window.confirm(
+      `Se va a cobrar ${formatCents(amount)} a la tarjeta de ${booking.client_name} ` +
+        `(${booking.card_label}) por no acudir a la cita del ${booking.date}.\n\n` +
+        `Esto cobra dinero de verdad y no se puede deshacer desde aquí.`,
+    );
+    if (!confirmed) return;
+
+    setWorking(true);
+    setNoShowError(null);
+    const response = await fetch("/api/admin/no-show", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: booking.code }),
+    });
+    const data = (await response.json()) as { ok: boolean; error?: string };
+    setWorking(false);
+    if (!data.ok) {
+      setNoShowError(data.error ?? "No se pudo cobrar.");
+      return;
+    }
     router.refresh();
   }
 
@@ -295,11 +333,42 @@ function BookingCard({ booking }: { booking: BookingRow }) {
         )}
       </div>
 
+      {/*
+        Para quien va a domicilio, esto es el dato operativo de la tarjeta: sin
+        él no sale de casa. Por eso va antes que la nota y más destacado.
+      */}
+      {siteConfig.venue.needsClientAddress && booking.client_address && (
+        <p className="mt-2 border-l-2 border-accent bg-bg px-3 py-2 text-[13px] leading-relaxed text-ink">
+          <span className="font-semibold">Dirección:</span> {booking.client_address}
+        </p>
+      )}
+
       {booking.notes && (
         <p className="mt-2 bg-bg px-3 py-2 text-[13px] leading-relaxed text-ink">
           <span className="font-semibold">Nota:</span> {booking.notes}
         </p>
       )}
+
+      {/*
+        Estado de la tarjeta guardada. Se enseña siempre que la política esté
+        activa, también cuando NO hay tarjeta: enterarse de que no la hay justo
+        cuando quieres cobrar un plantón es lo peor que puede pasar aquí.
+      */}
+      {siteConfig.noShow.enabled && (
+        <p className="mt-2 text-[12.5px] text-muted">
+          {booking.no_show_cents > 0 ? (
+            <span className="text-red-700">
+              Plantón cobrado: {formatCents(booking.no_show_cents)}
+            </span>
+          ) : booking.card_label ? (
+            <>Tarjeta guardada: {booking.card_label}</>
+          ) : (
+            <span className="text-amber-700">Sin tarjeta guardada</span>
+          )}
+        </p>
+      )}
+
+      {noShowError && <p className="mt-2 text-[12.5px] text-red-700">{noShowError}</p>}
 
       <div className="mt-3 flex flex-wrap gap-2">
         {booking.status !== "completed" && (
@@ -312,6 +381,23 @@ function BookingCard({ booking }: { booking: BookingRow }) {
             Marcar como realizada
           </button>
         )}
+        {/*
+          Solo tiene sentido cuando ya pasó la hora y hay tarjeta. Pide
+          confirmación porque cobra de verdad y no tiene botón de deshacer.
+        */}
+        {siteConfig.noShow.enabled &&
+          booking.card_label &&
+          booking.no_show_cents === 0 &&
+          isPast && (
+            <button
+              type="button"
+              className="btn-sm border border-line text-red-700 transition-colors hover:border-red-300 hover:bg-red-50"
+              disabled={working}
+              onClick={chargeNoShow}
+            >
+              Cobrar por no presentarse
+            </button>
+          )}
         {booking.status === "pending_payment" && (
           <button
             type="button"
@@ -337,6 +423,209 @@ function BookingCard({ booking }: { booking: BookingRow }) {
   );
 }
 
+/* -------------------------------------------------------------------------- */
+/*  Mi horario                                                                */
+/* -------------------------------------------------------------------------- */
+
+const WEEKDAY_NAMES = [
+  "Domingo",
+  "Lunes",
+  "Martes",
+  "Miércoles",
+  "Jueves",
+  "Viernes",
+  "Sábado",
+];
+/** De lunes a domingo, que es como se lee una semana. */
+const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0];
+
+/*
+ * El horario vivía en el código y cambiarlo obligaba a volver a desplegar. Aquí
+ * se edita y entra en vigor al guardar.
+ *
+ * Se trabaja sobre una copia local y solo se manda al servidor al pulsar
+ * Guardar: así se puede montar la semana entera —quitar una franja, añadir
+ * otra— sin que la web quede a medias mientras tanto.
+ */
+function ScheduleTab({ hours, isCustom }: { hours: WeeklyHours; isCustom: boolean }) {
+  const router = useRouter();
+  const [draft, setDraft] = useState<WeeklyHours>(() =>
+    Object.fromEntries(
+      Array.from({ length: 7 }, (_, day) => [day, (hours[day] ?? []).map((r) => ({ ...r }))]),
+    ),
+  );
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [working, setWorking] = useState(false);
+  const [noShowError, setNoShowError] = useState<string | null>(null);
+
+  function update(day: number, ranges: { start: string; end: string }[]) {
+    setDraft({ ...draft, [day]: ranges });
+    setSaved(false);
+  }
+
+  function addRange(day: number) {
+    const existing = draft[day] ?? [];
+    // Se propone la franja de tarde más habitual, para no escribirla a mano.
+    const suggestion = existing.length === 0
+      ? { start: "10:00", end: "14:00" }
+      : { start: "16:00", end: "20:00" };
+    update(day, [...existing, suggestion]);
+  }
+
+  function removeRange(day: number, index: number) {
+    update(day, (draft[day] ?? []).filter((_, i) => i !== index));
+  }
+
+  function editRange(day: number, index: number, field: "start" | "end", value: string) {
+    update(
+      day,
+      (draft[day] ?? []).map((range, i) => (i === index ? { ...range, [field]: value } : range)),
+    );
+  }
+
+  /** Copia el horario de un día en todos los demás días laborables. */
+  function copyToWeekdays(day: number) {
+    const source = (draft[day] ?? []).map((r) => ({ ...r }));
+    const next: WeeklyHours = { ...draft };
+    for (const target of [1, 2, 3, 4, 5]) next[target] = source.map((r) => ({ ...r }));
+    setDraft(next);
+    setSaved(false);
+  }
+
+  async function save() {
+    setWorking(true);
+    setError(null);
+    const response = await fetch("/api/admin/schedule", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ hours: draft }),
+    });
+    const data = (await response.json()) as { ok: boolean; error?: string };
+    setWorking(false);
+    if (!data.ok) {
+      setError(data.error ?? "No se pudo guardar el horario.");
+      return;
+    }
+    setSaved(true);
+    router.refresh();
+  }
+
+  async function restore() {
+    setWorking(true);
+    setError(null);
+    await fetch("/api/admin/schedule", { method: "DELETE" });
+    setWorking(false);
+    router.refresh();
+  }
+
+  const totalHours = WEEK_ORDER.reduce(
+    (sum, day) =>
+      sum +
+      (draft[day] ?? []).reduce((daySum, r) => {
+        const minutes = toMinutesSafe(r.end) - toMinutesSafe(r.start);
+        return daySum + (minutes > 0 ? minutes : 0);
+      }, 0),
+    0,
+  );
+
+  return (
+    <div className="card p-5">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h2 className="text-[19px]">Mi horario</h2>
+          <p className="mt-1 max-w-lg text-[13.5px] leading-relaxed text-muted">
+            Las horas en las que aceptas citas. Se aplica en cuanto guardas, y la web deja de
+            ofrecer lo que quites. Para cerrar un día suelto —un médico, un viaje— usa{" "}
+            <span className="font-medium text-ink">Bloquear horas</span>: eso no toca tu horario
+            de siempre.
+          </p>
+        </div>
+        <p className="text-[13px] text-muted">
+          {Math.round((totalHours / 60) * 10) / 10} h a la semana
+        </p>
+      </div>
+
+      <div className="mt-5 divide-y divide-line border-y border-line">
+        {WEEK_ORDER.map((day) => {
+          const ranges = draft[day] ?? [];
+          return (
+            <div key={day} className="grid gap-3 py-4 sm:grid-cols-[130px_1fr]">
+              <div>
+                <p className="text-[14px] font-semibold text-ink">{WEEKDAY_NAMES[day]}</p>
+                {ranges.length === 0 && <p className="text-[12.5px] text-muted">Cerrado</p>}
+              </div>
+
+              <div className="space-y-2">
+                {ranges.map((range, index) => (
+                  <div key={index} className="flex flex-wrap items-center gap-2">
+                    <input
+                      type="time"
+                      className="field w-[110px] py-1.5"
+                      value={range.start}
+                      onChange={(e) => editRange(day, index, "start", e.target.value)}
+                    />
+                    <span className="text-muted">–</span>
+                    <input
+                      type="time"
+                      className="field w-[110px] py-1.5"
+                      value={range.end}
+                      onChange={(e) => editRange(day, index, "end", e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="btn-ghost btn-sm"
+                      onClick={() => removeRange(day, index)}
+                    >
+                      Quitar
+                    </button>
+                  </div>
+                ))}
+
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" className="btn-ghost btn-sm" onClick={() => addRange(day)}>
+                    {ranges.length === 0 ? "Abrir este día" : "Añadir otra franja"}
+                  </button>
+                  {ranges.length > 0 && (
+                    <button
+                      type="button"
+                      className="btn-ghost btn-sm"
+                      onClick={() => copyToWeekdays(day)}
+                    >
+                      Copiar a lunes–viernes
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {error && <p className="mt-4 text-[13.5px] text-red-700">{error}</p>}
+      {saved && !error && <p className="mt-4 text-[13.5px] text-green-700">Horario guardado.</p>}
+
+      <div className="mt-5 flex flex-wrap gap-2">
+        <button type="button" className="btn" disabled={working} onClick={save}>
+          {working ? "Guardando…" : "Guardar horario"}
+        </button>
+        {isCustom && (
+          <button type="button" className="btn-ghost" disabled={working} onClick={restore}>
+            Volver al horario original
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** "HH:MM" a minutos. Devuelve 0 si el campo está a medio escribir. */
+function toMinutesSafe(value: string): number {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value);
+  if (!match) return 0;
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
 function BlocksTab({ blocks, today }: { blocks: BlockRow[]; today: string }) {
   const router = useRouter();
   const [form, setForm] = useState({
@@ -347,6 +636,7 @@ function BlocksTab({ blocks, today }: { blocks: BlockRow[]; today: string }) {
   });
   const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
+  const [noShowError, setNoShowError] = useState<string | null>(null);
 
   async function add(event: React.FormEvent) {
     event.preventDefault();

@@ -3,7 +3,7 @@ import siteConfig from "@config";
 import { AdminLogin } from "@/components/admin/AdminLogin";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { isAdmin, usingDefaultPassword } from "@/lib/admin-auth";
-import { allBookings, blocksBetween, recentEmails } from "@/lib/db";
+import { allBookings, blocksBetween, getWeeklyHours, recentEmails } from "@/lib/db";
 import { isRealMailConfigured } from "@/lib/mail/send";
 import { isStripeConfigured } from "@/lib/payments";
 import { buildStats } from "@/lib/stats";
@@ -23,6 +23,10 @@ export default async function AdminPage() {
   const bookings = await allBookings(300);
   const blocks = await blocksBetween(today, addDays(today, siteConfig.booking.maxDaysAhead));
 
+  // null = nunca se ha tocado el horario, así que manda el de la configuración.
+  // Se distingue para poder ofrecer el botón de «volver al horario original».
+  const savedHours = await getWeeklyHours();
+
   // El HTML completo de cada email solo se pide al abrirlo, para no cargar de más.
   const emails = (await recentEmails(40)).map((email) => ({
     id: email.id,
@@ -41,6 +45,8 @@ export default async function AdminPage() {
       stats={stats}
       bookings={bookings}
       blocks={blocks}
+      hours={savedHours ?? siteConfig.hours}
+      hoursAreCustom={savedHours !== null}
       emails={emails}
       mailMode={isRealMailConfigured() ? "real" : "simulado"}
       paymentMode={isStripeConfigured() ? "stripe" : "demo"}

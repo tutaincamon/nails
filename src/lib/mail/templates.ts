@@ -88,12 +88,23 @@ function detailsTable(booking: BookingRow): string {
       ? row("Extras", addOns.map((a) => `${escapeHtml(a.name)} (+${formatCents(Math.round(a.price * 100))})`).join("<br>"))
       : "";
 
+  /*
+   * Va en todos los emails, no solo en el aviso a la profesional: en el
+   * recordatorio del día antes es justo lo que necesita para salir de casa, y
+   * a la clienta le sirve para detectar que se equivocó al escribirla.
+   */
+  const address =
+    siteConfig.venue.needsClientAddress && booking.client_address
+      ? row("Dirección", escapeHtml(booking.client_address).replace(/\n/g, "<br>"))
+      : "";
+
   return `
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
     ${row("Servicio", escapeHtml(booking.service_name))}
     ${extras}
     ${row("Día", `${escapeHtml(formatDateLong(booking.date))}`)}
     ${row("Hora", `${escapeHtml(booking.start_time)} – ${escapeHtml(booking.end_time)} <span style="font-weight:400;color:${theme.muted};">(${formatDuration(booking.duration_min)})</span>`)}
+    ${address}
     ${row("Precio", priceLabel)}
     ${row("Código de reserva", `<code style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:${theme.bg};padding:2px 6px;border-radius:4px;">${escapeHtml(booking.code)}</code>`)}
   </table>`;
@@ -118,9 +129,9 @@ function calloutBox(text: string): string {
 export function clientConfirmation(booking: BookingRow, manageUrl: string) {
   const depositLine =
     booking.deposit_status === "paid"
-      ? `Señal de ${formatCents(booking.deposit_cents)} pagada. Se descuenta del precio final: en el estudio quedarían ${formatCents(Math.max(0, booking.price_cents - booking.deposit_cents))}${booking.price_from ? " o más, según el diseño" : ""}.`
+      ? `Señal de ${formatCents(booking.deposit_cents)} pagada. Se descuenta del precio final: ${siteConfig.venue.payWhere} quedarían ${formatCents(Math.max(0, booking.price_cents - booking.deposit_cents))}${booking.price_from ? " o más, según el diseño" : ""}.`
       : booking.deposit_status === "on_site"
-        ? "Pagarás el importe completo en el estudio (efectivo o Bizum)."
+        ? `Pagarás el importe completo ${siteConfig.venue.payWhere} (efectivo o Bizum).`
         : "";
 
   const body = `
@@ -186,7 +197,7 @@ export function ownerNotification(booking: BookingRow, adminUrl: string) {
         ? calloutBox(
             booking.deposit_status === "paid"
               ? `Señal de <strong>${formatCents(booking.deposit_cents)}</strong> cobrada${booking.payment_ref ? ` (ref. ${escapeHtml(booking.payment_ref)})` : ""}.`
-              : `Sin señal: paga el total en el estudio.`,
+              : `Sin señal: paga el total ${siteConfig.venue.payWhere}.`,
           )
         : ""
     }
@@ -206,6 +217,9 @@ export function ownerNotification(booking: BookingRow, adminUrl: string) {
       `Nueva reserva en ${business.name}`,
       ``,
       `${booking.client_name} · ${booking.client_phone} · ${booking.client_email}`,
+      siteConfig.venue.needsClientAddress && booking.client_address
+        ? `Dirección: ${booking.client_address.replace(/\n/g, ", ")}`
+        : "",
       `Servicio: ${booking.service_name}`,
       `Día: ${formatDateLong(booking.date)} ${booking.start_time}-${booking.end_time}`,
       `Duración: ${formatDuration(booking.duration_min)}`,

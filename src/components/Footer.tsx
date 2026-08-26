@@ -1,10 +1,12 @@
 import Link from "next/link";
 import siteConfig from "@config";
 import { formatDayHours } from "@/components/hours-text";
+import { effectiveHours } from "@/lib/availability";
 
-export function Footer() {
+export async function Footer() {
   const { business } = siteConfig;
   const year = new Date().getFullYear();
+  const hourRows = formatDayHours(await effectiveHours());
 
   return (
     <footer className="mt-24 border-t border-line bg-surface">
@@ -51,7 +53,7 @@ export function Footer() {
         <div>
           <p className="eyebrow">Horario</p>
           <ul className="mt-3 space-y-1.5 text-[14px] text-muted">
-            {formatDayHours().map((row) => (
+            {hourRows.map((row) => (
               <li key={row.label} className="flex justify-between gap-4">
                 <span className={row.closed ? "text-muted/60" : ""}>{row.label}</span>
                 <span className={row.closed ? "text-muted/60" : "text-ink"}>{row.hours}</span>

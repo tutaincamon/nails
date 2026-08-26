@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { confirmDeposit } from "@/lib/bookings";
+import { verifyStripeSession } from "@/lib/payments";
 
 export const runtime = "nodejs";
 
@@ -32,7 +33,14 @@ export async function POST(request: NextRequest) {
       const session = event.data.object;
       const code = session.metadata?.booking_code;
       if (code && session.payment_status === "paid") {
-        await confirmDeposit(code, `stripe:${session.id}`);
+        /*
+         * Se vuelve a pedir la sesión a Stripe en vez de fiarse del objeto del
+         * evento: así se recupera también la tarjeta guardada, que el evento no
+         * trae expandida. Este es el camino que se usa cuando la clienta cierra
+         * el navegador tras pagar y no pasa por la página de vuelta.
+         */
+        const verified = await verifyStripeSession(session.id, code);
+        await confirmDeposit(code, `stripe:${session.id}`, verified.card);
       }
     }
 

@@ -5,7 +5,7 @@ import { PreviewNote } from "@/components/PreviewNote";
 import { Reveal } from "@/components/Reveal";
 import { ServiceMenu } from "@/components/ServiceMenu";
 import { formatDayHours } from "@/components/hours-text";
-import { nextAvailableDays } from "@/lib/availability";
+import { effectiveHours, nextAvailableDays } from "@/lib/availability";
 import { formatDateLong } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +22,7 @@ export default async function HomePage() {
     console.error("[portada] No se pudo consultar la agenda:", error);
   }
 
-  const hours = formatDayHours();
+  const hours = formatDayHours(await effectiveHours());
   const gallery = siteConfig.gallery;
   const hero = gallery[0] ?? null;
   // Con solo tres fotos merece la pena darles una fila entera para ellas.
@@ -130,7 +130,7 @@ export default async function HomePage() {
       <section id="estudio" className="scroll-mt-20 border-t border-line bg-surface py-20 lg:py-28">
         <div className="section grid gap-14 lg:grid-cols-[1fr_1fr] lg:gap-24">
           <Reveal>
-            <p className="eyebrow">El estudio</p>
+            <p className="eyebrow">{siteConfig.venue.sectionTitle}</p>
             <h2 className="display-sm mt-3 max-w-[12ch]">{content.about.title}</h2>
             {content.about.body.map((paragraph) => (
               <p key={paragraph.slice(0, 20)} className="mt-5 max-w-md text-[15px] leading-relaxed text-muted">
@@ -184,6 +184,53 @@ export default async function HomePage() {
           </Reveal>
         </div>
       </section>
+
+      {/* ------------------------------------------------------------ RESEÑAS */}
+      {/*
+        Solo aparece cuando hay reseñas de verdad que enseñar. Quien no tenga
+        todavía no ve un hueco ni un apartado vacío: sencillamente no existe.
+      */}
+      {content.testimonials.length > 0 && (
+        <section id="opiniones" className="scroll-mt-20 border-t border-line py-20 lg:py-28">
+          <div className="section">
+            <Reveal>
+              <header className="mb-12">
+                <p className="eyebrow">Opiniones</p>
+                <h2 className="display-sm mt-3 max-w-[14ch]">Lo que dicen sus clientas</h2>
+              </header>
+            </Reveal>
+
+            <Reveal delay={60}>
+              {/*
+                Columnas de mampostería con CSS puro: las reseñas son de largos
+                muy distintos y en una rejilla normal las cortas dejarían huecos.
+              */}
+              <div className="gap-x-6 sm:columns-2 lg:columns-3">
+                {content.testimonials.map((review) => (
+                  <figure
+                    key={review.name + review.text.slice(0, 24)}
+                    className="mb-6 break-inside-avoid border border-line bg-surface p-6"
+                  >
+                    <div
+                      className="text-[13px] tracking-[0.2em] text-accent"
+                      aria-label="5 de 5 estrellas"
+                    >
+                      ★★★★★
+                    </div>
+                    <blockquote className="mt-3 text-[14.5px] leading-relaxed text-ink">
+                      {review.text}
+                    </blockquote>
+                    <figcaption className="mt-4 text-[12.5px] text-muted">
+                      <span className="font-semibold text-ink">{review.name}</span>
+                      {review.service && <> · {review.service}</>}
+                    </figcaption>
+                  </figure>
+                ))}
+              </div>
+            </Reveal>
+          </div>
+        </section>
+      )}
 
       {/* --------------------------------------------------------------- DUDAS */}
       <section id="dudas" className="section scroll-mt-20 py-20 lg:py-28">

@@ -26,7 +26,39 @@ todas; cada una se despliega por separado y con su propia base de datos.
 - Aviso por email de cada reserva nueva, con teléfono y notas de la clienta.
 - Panel en `/admin`: próximas citas, histórico, cambio de estado, bloqueo de
   horas (médico, recados, descanso) y bandeja con todos los emails enviados.
+- **Su horario, editable desde el panel** (pestaña «Mi horario»), sin tocar
+  código ni volver a desplegar. Mientras no lo toque, rige el del archivo.
 - Ingresos previstos y señales ya cobradas de un vistazo.
+
+### Para quien trabaja a domicilio
+
+Con `venue.needsClientAddress` en true, la dirección deja de ser un dato
+opcional y pasa a ser obligatoria: sin ella la cita no se puede atender. Sale
+en el email de aviso, en el recordatorio y destacada en el panel. Y el
+vocabulario de toda la web cambia con `venue`, que es lo que hace que no le
+diga a su clienta que se pase «por el estudio».
+
+Ojo con `booking.bufferMinutes`: ahí ya no son minutos de limpieza, son minutos
+de **desplazamiento**. Es el número que decide si la agenda le da citas a las
+que puede llegar.
+
+### Cobrar plantones (opcional)
+
+Con `noShow.enabled`, la pantalla que cobra la señal guarda además la tarjeta,
+y desde `/admin` se puede cobrar a quien no aparece. Requiere Stripe.
+
+**El número de tarjeta no pasa nunca por este servidor**: lo pide y lo guarda
+Stripe, y aquí solo queda un identificador que sirve para cobrar en esa cuenta
+de Stripe y en ninguna otra.
+
+No se cobra sin que conste que la clienta aceptó la política al reservar: la
+fecha se guarda en `policy_accepted_at` y sin ella el sistema se niega.
+
+Conviene saber que **no es un cobro garantizado**: en Europa el banco puede
+exigir que la clienta autentique el pago, y sin ella delante eso no se puede
+hacer. El panel lo dice con todas las letras en vez de fallar en silencio.
+`noShow.hoursBefore` tiene que coincidir con `booking.cancellationHours`, o la
+web promete cancelación gratis en horas en las que ya cobra.
 
 ## Arrancar
 
@@ -63,6 +95,7 @@ config/
   clients/
     appflu.ts           la web general del producto (por defecto)
     isis.ts             Isis Nails · Las Palmas
+    indira.ts           Luamiz · Indira, a domicilio en Las Palmas
 ```
 
 Cada una se despliega como **su propio proyecto de Vercel, con su propia base
@@ -72,6 +105,7 @@ imposible que las clientas de una acaben viéndose en la agenda de otra.
 ```bash
 npm run dev        # Appflu, en el puerto 3000
 npm run dev:isis   # Isis, en el puerto 3001
+npm run dev:indira # Luamiz, en el puerto 3002
 ```
 
 ### Dar de alta a una nueva

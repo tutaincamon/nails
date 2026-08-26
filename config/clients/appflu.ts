@@ -114,6 +114,34 @@ export const appflu = {
   ] as { src: string; alt: string }[],
 
   /* ---------------------------------------------------------------------- */
+  /*  DÓNDE SE HACE LA CITA                                                 */
+  /*                                                                        */
+  /*  El producto da por hecho que la clienta va a un estudio, y eso se     */
+  /*  decía a mano en la web, en el asistente de reserva y en los emails.   */
+  /*  Quien trabaja a domicilio va al revés: es ella la que se desplaza, y  */
+  /*  «en el estudio» le queda mal en diez sitios distintos.                */
+  /*                                                                        */
+  /*  Los valores de aquí abajo son los de siempre, así que quien tenga     */
+  /*  estudio no nota nada. Ver clients/indira.ts para el caso contrario.   */
+  /* ---------------------------------------------------------------------- */
+  venue: {
+    /** Dónde ocurre el servicio: «1 h 15 min {where}» */
+    where: "en el estudio",
+    /** Dónde se paga lo que falta: «el resto se paga {payWhere}» */
+    payWhere: "en el estudio",
+    /** Rótulo de la sección «Cómo trabajo» de la portada */
+    sectionTitle: "El estudio",
+    /**
+     * true cuando es la profesional quien se desplaza. Entonces la dirección
+     * de la clienta deja de ser un dato opcional y pasa a ser obligatoria: sin
+     * ella la cita no se puede atender, porque no se sabe a dónde ir.
+     */
+    needsClientAddress: false,
+    addressLabel: "¿Dónde voy?",
+    addressHint: "Calle, número, piso y población.",
+  },
+
+  /* ---------------------------------------------------------------------- */
   /*  2. IDENTIDAD VISUAL                                                   */
   /*     Cambia estos colores y la web entera cambia de estilo.             */
   /* ---------------------------------------------------------------------- */
@@ -173,6 +201,31 @@ export const appflu = {
     /** Si true, la clienta puede elegir pagar en el estudio */
     allowPayOnSite: true,
     note: "La señal se descuenta del precio final. Si cancelas con más de 24 h de antelación, se devuelve.",
+  },
+
+  /* ---------------------------------------------------------------------- */
+  /*  PLANTONES Y CANCELACIONES TARDÍAS                                     */
+  /*                                                                        */
+  /*  Guardar la tarjeta al reservar para poder cobrar a quien no aparece.  */
+  /*  El número de tarjeta NO pasa nunca por este servidor: lo pide un       */
+  /*  formulario de Stripe y aquí solo queda un identificador que sirve para */
+  /*  cobrar en esa cuenta de Stripe y en ninguna otra.                      */
+  /*                                                                        */
+  /*  Apagado por defecto: pedir la tarjeta espanta a parte de la clientela  */
+  /*  y no todo el mundo lo necesita.                                        */
+  /* ---------------------------------------------------------------------- */
+  noShow: {
+    enabled: false,
+    /**
+     * Cancelar con menos de estas horas cuenta como tarde y se cobra.
+     * Tiene que coincidir con booking.cancellationHours o la web se
+     * contradice: diría "cancela gratis hasta X" y cobraría antes de X.
+     */
+    hoursBefore: 24,
+    /** Porcentaje del servicio que se cobra. 100 = el servicio entero. */
+    chargePercent: 100,
+    /** Lo que la clienta acepta al reservar. Se guarda la fecha como prueba. */
+    terms: "",
   },
 
   /* ---------------------------------------------------------------------- */

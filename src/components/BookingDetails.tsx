@@ -47,17 +47,20 @@ export function BookingDetails({ booking }: { booking: BookingRow }) {
       {booking.deposit_status === "paid" && (
         <Row
           label="Señal pagada"
-          value={`${formatCents(booking.deposit_cents)} · quedan ${formatCents(rest)}${booking.price_from ? " o más" : ""} en el estudio`}
+          value={`${formatCents(booking.deposit_cents)} · quedan ${formatCents(rest)}${booking.price_from ? " o más" : ""} ${siteConfig.venue.payWhere}`}
         />
       )}
       {booking.deposit_status === "pending" && (
         <Row label="Señal pendiente" value={formatCents(booking.deposit_cents)} />
       )}
       {booking.deposit_status === "on_site" && (
-        <Row label="Pago" value="Importe completo en el estudio" />
+        <Row label="Pago" value={`Importe completo ${siteConfig.venue.payWhere}`} />
       )}
       <Row label="A nombre de" value={booking.client_name} />
       <Row label="Contacto" value={`${booking.client_email} · ${booking.client_phone}`} />
+      {siteConfig.venue.needsClientAddress && booking.client_address && (
+        <Row label="Dirección" value={booking.client_address} />
+      )}
       {booking.notes && <Row label="Nota" value={booking.notes} />}
       <Row label="Código" value={booking.code} mono />
       <Row label="Dónde" value={siteConfig.business.address.area} />

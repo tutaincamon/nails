@@ -11,6 +11,7 @@ type Payload = {
   name?: unknown;
   email?: unknown;
   phone?: unknown;
+  address?: unknown;
   notes?: unknown;
   payment?: unknown;
 };
@@ -46,6 +47,7 @@ export async function POST(request: NextRequest) {
     name: str(payload.name),
     email: str(payload.email),
     phone: str(payload.phone),
+    address: str(payload.address),
     notes: str(payload.notes),
     payment,
   });

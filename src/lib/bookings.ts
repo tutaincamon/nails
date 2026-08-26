@@ -13,10 +13,13 @@ import {
   getBooking,
   insertBooking,
   markDepositPaid,
+  markPolicyAccepted,
   markReminderSent,
+  saveCardOnFile,
   updateBookingStatus,
   type BookingRow,
 } from "@/lib/db";
+import type { SavedCard } from "@/lib/payments";
 import {
   cancellationNotice,
   clientConfirmation,
@@ -39,6 +42,8 @@ export type CreateBookingInput = {
   name: string;
   email: string;
   phone: string;
+  /** Dónde vive la clienta. Obligatorio si es la profesional quien se desplaza. */
+  address?: string;
   notes?: string;
   payment: PaymentChoice;
 };
@@ -81,6 +86,17 @@ function validateClient(input: CreateBookingInput): { error: string; field: stri
   if (digits.length < 9) {
     return { error: "Necesito un teléfono válido por si tengo que avisarte.", field: "phone" };
   }
+  /*
+   * Cuando es la profesional quien se desplaza, la dirección no es un extra:
+   * sin ella la cita no se puede atender. Se valida aquí, en el servidor, y no
+   * solo en el formulario, porque el navegador puede saltárselo.
+   */
+  if (siteConfig.venue.needsClientAddress && (input.address ?? "").trim().length < 8) {
+    return {
+      error: "Necesito la dirección completa para poder ir: calle, número y población.",
+      field: "address",
+    };
+  }
   return null;
 }
 
@@ -122,6 +138,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     client_name: input.name.trim(),
     client_email: input.email.trim().toLowerCase(),
     client_phone: input.phone.trim(),
+    client_address: (input.address ?? "").trim().slice(0, 300),
     notes: (input.notes ?? "").trim().slice(0, 800),
     deposit_cents: wantsDeposit ? q.depositCents : 0,
     deposit_status: (wantsDeposit ? "pending" : "on_site") as BookingRow["deposit_status"],
@@ -130,6 +147,16 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
   };
 
   await insertBooking(row);
+
+  /*
+   * Sin constancia de que aceptó la política no se le puede cobrar un plantón,
+   * así que se guarda la fecha en el mismo momento de crear la reserva. El
+   * texto exacto que aceptó vive en la configuración (noShow.terms).
+   */
+  if (siteConfig.noShow.enabled) {
+    await markPolicyAccepted(code, new Date().toISOString());
+  }
+
   const booking = await getBooking(code);
   if (!booking) return { ok: false, error: "No se pudo guardar la reserva. Inténtalo de nuevo." };
 
@@ -174,12 +201,21 @@ export async function notifyConfirmed(booking: BookingRow) {
 /* -------------------------------------------------------------------------- */
 /*  Pago de la señal                                                          */
 /* -------------------------------------------------------------------------- */
-export async function confirmDeposit(code: string, paymentRef: string) {
+export async function confirmDeposit(code: string, paymentRef: string, card?: SavedCard) {
   const before = await getBooking(code);
   if (!before) return { ok: false as const, error: "Reserva no encontrada." };
   if (before.deposit_status === "paid") {
     // Idempotente: Stripe puede reintentar el webhook y no queremos duplicar emails.
     return { ok: true as const, booking: before, alreadyPaid: true };
+  }
+
+  /*
+   * La tarjeta se guarda antes que nada. Si esto se hiciera después de marcar
+   * la señal como pagada y fallase, quedaría una reserva confirmada sin tarjeta
+   * y la política de plantones no se podría aplicar sin que nadie lo notara.
+   */
+  if (card) {
+    await saveCardOnFile(code, card.customerId, card.paymentMethodId, card.label);
   }
 
   await markDepositPaid(code, paymentRef);

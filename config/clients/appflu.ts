@@ -122,7 +122,7 @@ export const appflu = {
   /*  «en el estudio» le queda mal en diez sitios distintos.                */
   /*                                                                        */
   /*  Los valores de aquí abajo son los de siempre, así que quien tenga     */
-  /*  estudio no nota nada. Ver clients/indira.ts para el caso contrario.   */
+  /*  estudio no nota nada. Ver clients/luamiz.ts para el caso contrario.   */
   /* ---------------------------------------------------------------------- */
   venue: {
     /** Dónde ocurre el servicio: «1 h 15 min {where}» */

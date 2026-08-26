@@ -95,7 +95,7 @@ config/
   clients/
     appflu.ts           la web general del producto (por defecto)
     isis.ts             Isis Nails · Las Palmas
-    indira.ts           Luamiz · Indira, a domicilio en Las Palmas
+    luamiz.ts           Luamiz · Indira, a domicilio en Las Palmas
 ```
 
 Cada una se despliega como **su propio proyecto de Vercel, con su propia base
@@ -105,7 +105,7 @@ imposible que las clientas de una acaben viéndose en la agenda de otra.
 ```bash
 npm run dev        # Appflu, en el puerto 3000
 npm run dev:isis   # Isis, en el puerto 3001
-npm run dev:indira # Luamiz, en el puerto 3002
+npm run dev:luamiz # Luamiz, en el puerto 3002
 ```
 
 ### Dar de alta a una nueva

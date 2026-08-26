@@ -29,7 +29,7 @@ import { appflu } from "./appflu";
  *  y sin margen para llegar. Hay que repasarlos con ella uno a uno.
  * ========================================================================== */
 
-export const indira = {
+export const luamiz = {
   ...appflu,
 
   business: {
@@ -44,7 +44,7 @@ export const indira = {
     instagram: "beautynailsindiradiazz",
     tiktok: "",
     /* Recortado de su cartelera. Conviene pedirle el archivo original. */
-    logo: "/indira/logo.png",
+    logo: "/luamiz/logo.png",
     logoAlt: "Luamiz · manicura y pedicura a domicilio",
     address: {
       area: "Las Palmas de Gran Canaria",
@@ -113,31 +113,31 @@ export const indira = {
    */
   gallery: [
     {
-      src: "/indira/frances-burdeos.jpg",
+      src: "/luamiz/frances-burdeos.jpg",
       alt: "Uñas almendradas con francesa en burdeos y borde difuminado sobre pelo rosa",
     },
     {
-      src: "/indira/frances-rosa.jpg",
+      src: "/luamiz/frances-rosa.jpg",
       alt: "Uñas largas cuadradas con francesa en rosa fucsia con purpurina",
     },
     {
-      src: "/indira/frances-blanca.jpg",
+      src: "/luamiz/frances-blanca.jpg",
       alt: "Manicura cuadrada con francesa blanca clásica sobre base rosada",
     },
     {
-      src: "/indira/naranja-nude.jpg",
+      src: "/luamiz/naranja-nude.jpg",
       alt: "Manicura almendrada combinando naranja neón y nude con una línea de cristales dorados",
     },
     {
-      src: "/indira/amarillo-pastel.jpg",
+      src: "/luamiz/amarillo-pastel.jpg",
       alt: "Uñas largas cuadradas en amarillo pastel con dos uñas nude decoradas con flores en relieve",
     },
     {
-      src: "/indira/naranja-glitter.jpg",
+      src: "/luamiz/naranja-glitter.jpg",
       alt: "Uñas XL cuadradas alternando naranja con purpurina y nude translúcido",
     },
     {
-      src: "/indira/azul-noche.jpg",
+      src: "/luamiz/azul-noche.jpg",
       alt: "Uñas ovaladas cortas en azul noche con la cutícula perfilada en purpurina",
     },
   ] as { src: string; alt: string }[],

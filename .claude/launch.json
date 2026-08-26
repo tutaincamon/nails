@@ -29,11 +29,11 @@
       "port": 3001
     },
     {
-      "name": "indira",
+      "name": "luamiz",
       "runtimeExecutable": "npm",
       "runtimeArgs": [
         "run",
-        "dev:indira"
+        "dev:luamiz"
       ],
       "port": 3002
     }

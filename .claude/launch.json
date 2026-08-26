@@ -27,6 +27,15 @@
         "dev:isis"
       ],
       "port": 3001
+    },
+    {
+      "name": "indira",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev:indira"
+      ],
+      "port": 3002
     }
   ]
 }

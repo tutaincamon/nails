@@ -2,6 +2,7 @@ import { appflu } from "./clients/appflu";
 
 export type { Service, ServiceCategory, AddOn, TimeRange } from "./clients/appflu";
 import { isis } from "./clients/isis";
+import { indira } from "./clients/indira";
 
 /* ============================================================================
  *  QUÉ PROFESIONAL SE MUESTRA
@@ -25,7 +26,7 @@ import { isis } from "./clients/isis";
  *    3. Despliega con NEXT_PUBLIC_CLIENT_ID=<su id>.
  * ========================================================================== */
 
-const clients = { appflu, isis };
+const clients = { appflu, isis, indira };
 
 export type ClientId = keyof typeof clients;
 

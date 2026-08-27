@@ -1,13 +1,68 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
-/** Formulario que pide el enlace a "Mis citas" por email. */
+/**
+ * Entrada a "Mis citas".
+ *
+ * Si este dispositivo ya está reconocido de una reserva anterior, se entra
+ * directo: pedirle un correo para demostrar quién es cuando acaba de
+ * demostrarlo es hacerle dar una vuelta para nada. El formulario del email
+ * queda como lo que es, la vía para quien llega desde otro móvil.
+ */
 export function PedirEnlace() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [enviado, setEnviado] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [comprobando, setComprobando] = useState(true);
+
+  useEffect(() => {
+    let guardado: string | null = null;
+    try {
+      guardado = window.localStorage.getItem("studio:dispositivo");
+    } catch {
+      /* modo incógnito */
+    }
+    if (!guardado) {
+      setComprobando(false);
+      return;
+    }
+
+    let cancelado = false;
+    (async () => {
+      try {
+        const r = await fetch("/api/verificar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ recuerdo: guardado }),
+        });
+        const d = (await r.json()) as { ok: boolean; testigo?: string };
+        if (cancelado) return;
+        if (d.ok && d.testigo) {
+          router.replace(`/mis-citas/${d.testigo}`);
+          return;
+        }
+        setComprobando(false);
+      } catch {
+        if (!cancelado) setComprobando(false);
+      }
+    })();
+    return () => {
+      cancelado = true;
+    };
+  }, [router]);
+
+  if (comprobando) {
+    return (
+      <div className="border border-line bg-surface p-6">
+        <div className="h-5 w-40 animate-pulse bg-line/60" />
+        <div className="mt-3 h-10 animate-pulse bg-line/40" />
+      </div>
+    );
+  }
 
   async function enviar(evento: React.FormEvent) {
     evento.preventDefault();

@@ -6,6 +6,7 @@ import {
   leerRecuerdo,
   prepararCodigo,
 } from "@/lib/verification";
+import { crearTestigo } from "@/lib/client-portal";
 import { verificationCode } from "@/lib/mail/templates";
 import { sendAll } from "@/lib/mail/send";
 
@@ -40,6 +41,12 @@ export async function POST(request: NextRequest) {
       ok: true,
       email: reconocido,
       pase: crearPase(reconocido),
+      /*
+       * También el testigo del portal: si ya sabemos que este dispositivo es
+       * suyo, mandarle un correo para entrar en "Mis citas" sería pedirle que
+       * demuestre otra vez algo que acaba de demostrar.
+       */
+      testigo: crearTestigo(reconocido),
       datos: await datosDe(reconocido),
     });
   }

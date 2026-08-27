@@ -4,6 +4,7 @@ import siteConfig from "@config";
 import { leerTestigo } from "@/lib/client-portal";
 import { puedeBorrar } from "@/lib/client-data";
 import { MisDatos } from "@/components/MisDatos";
+import { SalirDispositivo } from "@/components/SalirDispositivo";
 import { bookingsForEmail, type BookingRow } from "@/lib/db";
 import { StatusBadge, capitalize } from "@/components/BookingDetails";
 import { formatCents } from "@/lib/money";
@@ -140,9 +141,12 @@ function Marco({ titulo, children }: { titulo: string; children: React.ReactNode
   return (
     <>
       <div className="border-b border-line bg-surface">
-        <div className="section py-10">
-          <p className="eyebrow">Mis citas</p>
-          <h1 className="mt-2 text-[clamp(2rem,5vw,3rem)]">{titulo}</h1>
+        <div className="section flex flex-wrap items-end justify-between gap-4 py-10">
+          <div>
+            <p className="eyebrow">Mis citas</p>
+            <h1 className="mt-2 text-[clamp(2rem,5vw,3rem)]">{titulo}</h1>
+          </div>
+          <SalirDispositivo />
         </div>
       </div>
       <div className="section max-w-2xl py-10 lg:py-14">{children}</div>

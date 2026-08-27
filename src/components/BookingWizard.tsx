@@ -15,6 +15,58 @@ type Step = 0 | 1 | 2 | 3;
 const STEPS = ["Servicio", "Día y hora", "Tus datos", "Confirmar"];
 const { deposit, booking: bookingRules, business } = siteConfig;
 
+/* -------------------------------------------------------------------------- */
+/*  Datos recordados de la última reserva                                     */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Una clienta que viene cada tres semanas no debería reescribir su nombre, su
+ * email, su teléfono y su dirección cada vez. Se guardan en SU navegador, no en
+ * el servidor: no hay cuenta que crear ni contraseña que recordar, y si usa
+ * otro móvil simplemente los vuelve a escribir.
+ *
+ * Las notas no se guardan a propósito: son de aquella cita concreta ("llevo
+ * acrílicas de otro sitio"), no de la persona, y reaparecer con la nota de hace
+ * un mes confunde más que ayuda.
+ */
+const RECUERDO = "studio:cliente";
+
+type DatosRecordados = { name: string; email: string; phone: string; address: string };
+
+function leerRecuerdo(): DatosRecordados | null {
+  try {
+    const crudo = window.localStorage.getItem(RECUERDO);
+    if (!crudo) return null;
+    const datos = JSON.parse(crudo) as Partial<DatosRecordados>;
+    if (!datos.name || !datos.email) return null;
+    return {
+      name: String(datos.name),
+      email: String(datos.email),
+      phone: String(datos.phone ?? ""),
+      address: String(datos.address ?? ""),
+    };
+  } catch {
+    // Modo incógnito, almacenamiento lleno o un JSON corrupto de otra versión.
+    return null;
+  }
+}
+
+function guardarRecuerdo(datos: DatosRecordados): void {
+  try {
+    window.localStorage.setItem(RECUERDO, JSON.stringify(datos));
+  } catch {
+    // Que no se pueda recordar no es motivo para romper una reserva ya hecha.
+  }
+}
+
+function olvidarRecuerdo(): void {
+  try {
+    window.localStorage.removeItem(RECUERDO);
+  } catch {
+    /* nada que hacer */
+  }
+}
+
 export function BookingWizard() {
   const router = useRouter();
   const params = useSearchParams();
@@ -30,6 +82,26 @@ export function BookingWizard() {
   );
 
   const [form, setForm] = useState({ name: "", email: "", phone: "", address: "", notes: "" });
+  /* true = los datos vienen de una reserva anterior, no los ha escrito ahora. */
+  const [recordada, setRecordada] = useState(false);
+
+  /*
+   * Se lee después de montar y no en el useState inicial: en el servidor no
+   * existe localStorage, y rellenar el formulario durante el render inicial
+   * haría que el HTML del servidor y el del navegador no coincidieran.
+   */
+  useEffect(() => {
+    const datos = leerRecuerdo();
+    if (!datos) return;
+    setForm((actual) => ({ ...actual, ...datos }));
+    setRecordada(true);
+  }, []);
+
+  function olvidar() {
+    olvidarRecuerdo();
+    setForm({ name: "", email: "", phone: "", address: "", notes: "" });
+    setRecordada(false);
+  }
   const [accepted, setAccepted] = useState(false);
 
   const [weekStart, setWeekStart] = useState<string>(() => todayISO());
@@ -140,6 +212,18 @@ export function BookingWizard() {
         }
         return;
       }
+
+      /*
+       * Solo se recuerda cuando la reserva ha salido bien. Guardarlo antes
+       * dejaría memorizados datos que el servidor acaba de rechazar por no ser
+       * válidos.
+       */
+      guardarRecuerdo({
+        name: form.name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        address: form.address.trim(),
+      });
 
       router.push(data.next!);
     } catch {
@@ -323,10 +407,29 @@ export function BookingWizard() {
         {/* -------------------------------------------------- PASO 2: DATOS */}
         {step === 2 && (
           <div className="animate-rise mt-8">
-            <h2 className="text-[26px]">¿Cómo te localizo?</h2>
+            <h2 className="text-[26px]">
+              {recordada ? "¿Sigue todo igual?" : "¿Cómo te localizo?"}
+            </h2>
             <p className="mt-1.5 text-[14px] text-muted">
-              Te enviaré la confirmación por email y solo usaré el teléfono si surge algún cambio.
+              {recordada
+                ? siteConfig.venue.needsClientAddress
+                  ? "Están tus datos de la última vez. Revisa sobre todo la dirección y, si todo sigue igual, sigue adelante."
+                  : "Están tus datos de la última vez. Revísalos y sigue adelante."
+                : "Te enviaré la confirmación por email y solo usaré el teléfono si surge algún cambio."}
             </p>
+
+            {recordada && (
+              <p className="mt-3 border border-line bg-surface px-4 py-2.5 text-[12.5px] leading-relaxed text-muted">
+                Guardados en este dispositivo, no en ninguna cuenta.{" "}
+                <button
+                  type="button"
+                  onClick={olvidar}
+                  className="font-semibold text-primary underline underline-offset-2"
+                >
+                  No soy yo, vaciar
+                </button>
+              </p>
+            )}
 
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">

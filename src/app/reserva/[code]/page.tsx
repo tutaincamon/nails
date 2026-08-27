@@ -85,10 +85,36 @@ export default async function BookingPage({ params, searchParams }: Props) {
 
       {booking.status !== "cancelled" && (
         <div className="mt-6 border border-line bg-surface p-5">
-          <p className="eyebrow">Cómo llegar</p>
-          <p className="mt-2 text-[14px] leading-relaxed text-muted">
-            {siteConfig.business.address.note}
-          </p>
+          {/*
+            Cuando es la profesional quien se desplaza, "Cómo llegar" y la frase
+            de "dime la dirección al reservar" no pintan nada aquí: la clienta
+            ya la ha dado y no tiene que ir a ningún sitio. Lo útil es
+            devolvérsela escrita, para que vea si se equivocó al teclearla.
+          */}
+          {siteConfig.venue.needsClientAddress ? (
+            <>
+              <p className="eyebrow">Dónde voy</p>
+              {booking.client_address ? (
+                <p className="mt-2 whitespace-pre-line text-[14px] leading-relaxed text-ink">
+                  {booking.client_address}
+                </p>
+              ) : (
+                <p className="mt-2 text-[14px] leading-relaxed text-muted">
+                  No consta la dirección. Escríbeme para dármela antes de la cita.
+                </p>
+              )}
+              <p className="mt-2 text-[13px] leading-relaxed text-muted">
+                Si algo de la dirección no está bien, dímelo y lo corrijo.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="eyebrow">Cómo llegar</p>
+              <p className="mt-2 text-[14px] leading-relaxed text-muted">
+                {siteConfig.business.address.note}
+              </p>
+            </>
+          )}
           <p className="mt-3 text-[14px] leading-relaxed text-muted">
             {siteConfig.business.whatsapp ? (
               <>
@@ -116,11 +142,38 @@ export default async function BookingPage({ params, searchParams }: Props) {
         )}
 
         {booking.status !== "cancelled" && !cancellable && !isPast && (
-          <p className="text-[13.5px] leading-relaxed text-muted">
-            Ya no se puede cancelar online porque quedan menos de{" "}
-            {siteConfig.booking.cancellationHours} h. Si no puedes venir, {contactSentence()} cuanto
-            antes y lo solucionamos.
-          </p>
+          /*
+           * Pasado el plazo, esto deja de ser un aviso informativo: es el
+           * momento en que dejar de venir cuesta dinero. Se dice con el importe
+           * delante y destacado, no en gris entre otras frases, porque es justo
+           * lo que la clienta aceptó al reservar y ya no recuerda.
+           */
+          <div
+            className={
+              siteConfig.noShow.enabled
+                ? "border border-amber-300 bg-amber-50 p-4"
+                : "text-[13.5px] leading-relaxed text-muted"
+            }
+          >
+            {siteConfig.noShow.enabled && (
+              <p className="text-[14px] font-semibold text-amber-900">
+                Ya no puedes cancelar sin coste
+              </p>
+            )}
+            <p
+              className={
+                siteConfig.noShow.enabled
+                  ? "mt-1 text-[13.5px] leading-relaxed text-amber-900"
+                  : ""
+              }
+            >
+              Quedan menos de {siteConfig.booking.cancellationHours} h para la cita.
+              {siteConfig.noShow.enabled
+                ? ` A partir de ahora, si no acudes se cobra el ${siteConfig.noShow.chargePercent} % del servicio a la tarjeta que dejaste al reservar.`
+                : ""}{" "}
+              Si no puedes venir, {contactSentence()} cuanto antes y lo solucionamos.
+            </p>
+          </div>
         )}
 
         {booking.status === "cancelled" && (

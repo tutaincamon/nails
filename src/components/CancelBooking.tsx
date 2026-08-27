@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import siteConfig from "@config";
 
 /** Botón de cancelación con confirmación en dos pasos. */
 export function CancelBooking({ code, token }: { code: string; token: string }) {
@@ -54,6 +55,18 @@ export function CancelBooking({ code, token }: { code: string; token: string }) 
         El hueco quedará libre para otra persona y no se puede recuperar: habría que reservar de
         nuevo.
       </p>
+      {/*
+        Este botón solo aparece cuando aún se está a tiempo, así que aquí la
+        noticia es buena: cancela ahora y no se le cobra nada. Decírselo evita
+        que se quede con la duda del aviso que aceptó al reservar.
+      */}
+      {siteConfig.deposit.enabled && (
+        <p className="mt-2 text-[13px] leading-relaxed text-red-800">
+          Estás a tiempo: quedan más de {siteConfig.booking.cancellationHours} h, así que la señal
+          se te devuelve entera
+          {siteConfig.noShow.enabled && " y no se te cobra nada más"}.
+        </p>
+      )}
       <div className="mt-3 flex flex-wrap gap-2">
         <button
           type="button"

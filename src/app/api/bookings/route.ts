@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createBooking, type PaymentChoice } from "@/lib/bookings";
+import { leerPase } from "@/lib/verification";
 
 export const runtime = "nodejs";
 
@@ -11,6 +12,7 @@ type Payload = {
   name?: unknown;
   email?: unknown;
   phone?: unknown;
+  pase?: unknown;
   address?: unknown;
   notes?: unknown;
   payment?: unknown;
@@ -36,6 +38,24 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  /*
+   * El email sale del pase firmado, no del formulario. Es lo que impide que
+   * alguien reserve a nombre del correo de otra persona mandando una petición
+   * directamente a esta ruta: sin haber acertado el código no hay pase, y sin
+   * pase no hay reserva.
+   */
+  const emailVerificado = leerPase(str(payload.pase));
+  if (!emailVerificado) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Tienes que verificar tu email antes de reservar. Vuelve a empezar el paso de datos.",
+        field: "email",
+      },
+      { status: 401 },
+    );
+  }
+
   const payment: PaymentChoice = str(payload.payment) === "deposit" ? "deposit" : "on_site";
   const addons = Array.isArray(payload.addons) ? payload.addons.filter((a) => typeof a === "string") : [];
 
@@ -45,7 +65,7 @@ export async function POST(request: NextRequest) {
     date,
     time,
     name: str(payload.name),
-    email: str(payload.email),
+    email: emailVerificado,
     phone: str(payload.phone),
     address: str(payload.address),
     notes: str(payload.notes),

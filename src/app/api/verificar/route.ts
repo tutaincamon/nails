@@ -35,7 +35,12 @@ export async function POST(request: NextRequest) {
     if (!resultado.ok) {
       return NextResponse.json({ ok: false, error: resultado.error }, { status: 400 });
     }
-    return NextResponse.json({ ok: true, datos: resultado.datos });
+    return NextResponse.json({
+      ok: true,
+      pase: resultado.pase,
+      datos: resultado.datos,
+      esNueva: resultado.datos === null,
+    });
   }
 
   /* --- Pedir un código -------------------------------------------------- */

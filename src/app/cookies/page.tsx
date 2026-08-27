@@ -33,16 +33,12 @@ export default function CookiesPage() {
         </li>
       </ul>
 
-      <h2>Lo que se guarda solo si tú lo pides</h2>
-      <ul>
-        <li>
-          <strong>Tus datos de reserva</strong> —nombre, email, teléfono
-          {venue.needsClientAddress ? " y dirección" : ""}— para no hacerte escribirlos otra vez.
-          Se guarda únicamente si marcas la casilla al reservar. Se queda en tu navegador, no se
-          envía a ningún servidor, y puedes borrarlo desde el propio formulario con el botón «No soy
-          yo, vaciar».
-        </li>
-      </ul>
+      <p>
+        Esta web <strong>no guarda tus datos personales en tu navegador</strong>. Para reconocerte
+        cuando vuelves se usa un código que te llega al email, así que tu nombre, tu teléfono
+        {venue.needsClientAddress ? " y tu dirección" : ""} no se quedan escritos en el dispositivo
+        desde el que reservas.
+      </p>
 
       <h2>Lo que se guarda solo si lo aceptas</h2>
       <ul>

@@ -126,13 +126,18 @@ export default function PrivacidadPage() {
         <strong>Agencia Española de Protección de Datos</strong> (www.aepd.es).
       </p>
 
-      <h2>Datos guardados en tu propio móvil</h2>
+      <h2>Cómo se te reconoce cuando vuelves</h2>
       <p>
-        Para no hacerte escribir lo mismo cada vez, la web guarda tu nombre, email, teléfono
-        {venue.needsClientAddress ? " y dirección" : ""} <strong>en tu propio navegador</strong>.
-        Eso no se envía a ningún sitio ni se comparte: está solo en tu dispositivo, y puedes
-        borrarlo desde el propio formulario de reserva con el botón «No soy yo, vaciar» o limpiando
-        los datos del navegador.
+        Al reservar se te pide el email y se te envía un código de 6 cifras para comprobar que ese
+        buzón es tuyo. Solo después de acertarlo se rellenan tus datos de la última cita, y aun así
+        se te pide que los revises.
+      </p>
+      <p>
+        Se hace así por una razón: si bastara con teclear una dirección de correo para que
+        aparecieran el nombre, el teléfono
+        {venue.needsClientAddress ? " y la dirección de casa" : ""} de esa persona, cualquiera
+        podría averiguar quién es clienta probando correos.{" "}
+        <strong>Tus datos no se guardan en el navegador</strong> de ningún dispositivo.
       </p>
     </PaginaLegal>
   );

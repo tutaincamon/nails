@@ -6,18 +6,28 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import siteConfig from "@config";
 
+/*
+ * `movil` marca los tres que caben en un teléfono sin agobiar. En pantalla
+ * pequeña salían cero: solo el logotipo y el botón de reservar, así que las
+ * fotos, las opiniones y sus propias citas quedaban enterradas para quien
+ * entra desde el móvil, que es casi todo el mundo.
+ *
+ * Son tres a propósito. Con seis no se leería ninguno.
+ */
 const links = [
-  { href: "/#servicios", label: "Servicios" },
-  { href: "/#trabajos", label: "Trabajos" },
+  { href: "/#servicios", label: "Servicios", movil: false },
+  { href: "/#trabajos", label: "Trabajos", movil: true },
   // El ancla sigue siendo #estudio: es el id de la sección, no lo que se lee.
-  { href: "/#estudio", label: siteConfig.venue.sectionTitle },
+  { href: "/#estudio", label: siteConfig.venue.sectionTitle, movil: false },
   // La sección de opiniones solo existe si hay reseñas, así que el enlace también.
   ...(siteConfig.content.testimonials.length > 0
-    ? [{ href: "/#opiniones", label: "Opiniones" }]
+    ? [{ href: "/#opiniones", label: "Opiniones", movil: true }]
     : []),
-  { href: "/#dudas", label: "Dudas" },
-  { href: "/mis-citas", label: "Mis citas" },
+  { href: "/#dudas", label: "Dudas", movil: false },
+  { href: "/mis-citas", label: "Mis citas", movil: true },
 ];
+
+const enMovil = links.filter((l) => l.movil);
 
 /*
  * En la portada la navegación va superpuesta sobre la foto a sangre, en blanco
@@ -103,10 +113,34 @@ export function Nav() {
             Reservar
           </Link>
         </nav>
+
+        {/*
+          Segunda fila, solo en móvil. Va debajo y no dentro de la primera
+          porque en 375 px el logotipo y el botón de reservar ya ocupan la
+          anchura entera: metidos ahí, estos tres saldrían apelotonados.
+        */}
+        <nav
+          className={`section flex items-center gap-6 pb-2.5 md:hidden ${
+            overlay ? "" : "border-t border-line/60 pt-2.5"
+          }`}
+        >
+          {enMovil.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className={`text-[11px] font-semibold uppercase tracking-[0.14em] transition-opacity hover:opacity-60 ${
+                overlay ? "text-white/90" : "text-muted"
+              }`}
+            >
+              {link.label}
+            </Link>
+          ))}
+        </nav>
       </header>
 
-      {/* Fuera de la portada, la barra fija taparía el contenido. */}
-      {!isHome && <div className="h-[72px]" aria-hidden="true" />}
+      {/* Fuera de la portada, la barra fija taparía el contenido. En móvil son
+          dos filas, así que el hueco tiene que ser más alto. */}
+      {!isHome && <div className="h-[112px] md:h-[72px]" aria-hidden="true" />}
     </>
   );
 }

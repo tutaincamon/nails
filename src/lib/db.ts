@@ -523,6 +523,59 @@ export async function markNoShowCharged(
 }
 
 /* -------------------------------------------------------------------------- */
+/*  Datos de la clienta: quitar tarjeta y borrar cuenta                       */
+/* -------------------------------------------------------------------------- */
+
+/** Olvida las tarjetas guardadas de una clienta. Las citas se quedan. */
+export async function forgetCardsForEmail(email: string): Promise<void> {
+  const db = await driver();
+  await db.run(
+    `UPDATE bookings
+     SET stripe_customer_id = '', card_payment_method = '', card_label = ''
+     WHERE lower(client_email) = ?`,
+    [email.trim().toLowerCase()],
+  );
+}
+
+/**
+ * Borra los datos personales de una clienta conservando la cita en sí.
+ *
+ * No se borran las filas: una cita atendida es una venta, y la ley obliga a
+ * conservar el registro contable unos años. Lo que se borra es todo lo que
+ * identifica a la persona —nombre, email, teléfono, dirección, notas y las
+ * referencias de su tarjeta—, que es exactamente lo que protege el derecho de
+ * supresión. Lo que queda (fecha, servicio, importe) ya no apunta a nadie.
+ */
+export async function anonymiseClient(email: string): Promise<number> {
+  const db = await driver();
+  const clave = email.trim().toLowerCase();
+
+  const antes = (await db.all("SELECT code FROM bookings WHERE lower(client_email) = ?", [
+    clave,
+  ])) as { code: string }[];
+
+  await db.run(
+    `UPDATE bookings SET
+       client_name = 'Clienta que pidió borrar sus datos',
+       client_email = '',
+       client_phone = '',
+       client_address = '',
+       notes = '',
+       stripe_customer_id = '',
+       card_payment_method = '',
+       card_label = ''
+     WHERE lower(client_email) = ?`,
+    [clave],
+  );
+
+  // Los emails guardados también llevan su nombre y su dirección dentro.
+  await db.run("DELETE FROM emails WHERE lower(to_addr) = ?", [clave]);
+  await db.run("DELETE FROM verification_codes WHERE email = ?", [clave]);
+
+  return antes.length;
+}
+
+/* -------------------------------------------------------------------------- */
 /*  Códigos de verificación                                                   */
 /* -------------------------------------------------------------------------- */
 

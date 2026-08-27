@@ -191,6 +191,28 @@ async function cardFromSession(
   };
 }
 
+/**
+ * Suelta una tarjeta en Stripe para que deje de poder usarse.
+ *
+ * Borrar la referencia de nuestra base de datos no basta: mientras siga
+ * asociada en Stripe, sigue existiendo una tarjeta suya guardada en un sitio.
+ * Si esto falla, el borrado local se hace igual —la clienta ha pedido que se
+ * olviden sus datos y eso no puede depender de que un tercero responda—, pero
+ * se deja constancia en el registro.
+ */
+export async function detachCard(paymentMethodId: string): Promise<boolean> {
+  if (!isStripeConfigured() || !paymentMethodId) return false;
+  try {
+    const { default: Stripe } = await import("stripe");
+    const stripe = new Stripe(env("STRIPE_SECRET_KEY")!);
+    await stripe.paymentMethods.detach(paymentMethodId);
+    return true;
+  } catch (err) {
+    console.error(`[tarjeta] No se pudo soltar en Stripe: ${String(err)}`);
+    return false;
+  }
+}
+
 export type NoShowChargeResult =
   | { ok: true; ref: string }
   | { ok: false; error: string; needsAuthentication?: boolean };

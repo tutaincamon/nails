@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import siteConfig from "@config";
 import { leerTestigo } from "@/lib/client-portal";
+import { puedeBorrar } from "@/lib/client-data";
+import { MisDatos } from "@/components/MisDatos";
 import { bookingsForEmail, type BookingRow } from "@/lib/db";
 import { StatusBadge, capitalize } from "@/components/BookingDetails";
 import { formatCents } from "@/lib/money";
@@ -38,6 +40,7 @@ export default async function MisCitasToken({
   }
 
   const citas = await bookingsForEmail(leido.email);
+  const bloqueo = await puedeBorrar(leido.email);
   const ahora = citas.filter((c) => c.status !== "cancelled" && hoursUntil(c.date, c.start_time) >= 0);
   const antes = citas.filter((c) => !ahora.includes(c));
 
@@ -76,6 +79,14 @@ export default async function MisCitasToken({
             ))}
           </ul>
         </section>
+      )}
+
+      {citas.length > 0 && (
+        <MisDatos
+          testigo={token}
+          tieneTarjeta={citas.some((c) => Boolean(c.card_payment_method))}
+          bloqueo={bloqueo}
+        />
       )}
     </Marco>
   );

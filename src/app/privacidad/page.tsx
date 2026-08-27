@@ -101,7 +101,24 @@ export default function PrivacidadPage() {
       <h2>Qué puedes hacer</h2>
       <p>
         Tienes derecho a acceder a tus datos, corregirlos, borrarlos, oponerte a que se traten,
-        limitar su uso y llevártelos a otro sitio. Para cualquiera de esas cosas, escribe a{" "}
+        limitar su uso y llevártelos a otro sitio.
+      </p>
+      <p>
+        <strong>
+          Puedes hacerlo tú misma, sin pedir permiso ni esperar respuesta.
+        </strong>{" "}
+        Entra en <strong>Mis citas</strong>, pide el enlace a tu email y ahí abajo tienes dos
+        botones: quitar la tarjeta guardada, y borrar tus datos.
+        {noShow.enabled && (
+          <>
+            {" "}
+            La única condición es que no tengas una cita por delante: mientras la haya, la tarjeta
+            tiene que seguir ahí, que es lo que sostiene la política de cancelaciones.
+          </>
+        )}
+      </p>
+      <p>
+        Si prefieres pedirlo por escrito o quieres cualquier otra cosa, escribe a{" "}
         <strong>{emailLegal()}</strong> desde el email con el que reservaste.
       </p>
       <p>

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import siteConfig from "@config";
 import { addOnsForService, quote } from "@/lib/catalog";
+import { YaHeVenido } from "@/components/YaHeVenido";
 import { formatCents } from "@/lib/money";
 import { addDays, formatDateLong, formatDateShort, formatDuration, toMinutes } from "@/lib/time";
 
@@ -418,6 +419,22 @@ export function BookingWizard() {
                 : "Te enviaré la confirmación por email y solo usaré el teléfono si surge algún cambio."}
             </p>
 
+            {/*
+              Solo para quien llega en frío. Si ya se le han recordado los datos
+              desde su propio móvil, ofrecerle además un código sería pedirle
+              que demuestre quién es para algo que ya tiene delante.
+            */}
+            {!recordada && (
+              <YaHeVenido
+                email={form.email}
+                onEmailChange={(valor) => setForm((f) => ({ ...f, email: valor }))}
+                onRecuperado={(datos, correo) => {
+                  setForm((f) => ({ ...f, ...datos, email: correo }));
+                  setRecordada(true);
+                }}
+              />
+            )}
+
             {recordada && (
               <p className="mt-3 border border-line bg-surface px-4 py-2.5 text-[12.5px] leading-relaxed text-muted">
                 Guardados en este dispositivo, no en ninguna cuenta.{" "}
@@ -587,6 +604,19 @@ export function BookingWizard() {
                     {siteConfig.noShow.terms}
                   </strong>
                 )}
+                {/*
+                  El enlace va aquí y no solo en el pie: es la casilla que
+                  autoriza el cobro, así que las condiciones tienen que estar a
+                  un clic de ella, no escondidas al final de la página.
+                */}
+                <a
+                  href="/condiciones"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-block text-[12.5px] text-primary underline underline-offset-2"
+                >
+                  Leer las condiciones completas
+                </a>
               </span>
             </label>
           </div>

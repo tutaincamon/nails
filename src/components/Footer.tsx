@@ -96,8 +96,16 @@ export async function Footer() {
         <p>
           © {year} {business.name}. Todos los derechos reservados.
         </p>
-        <p className="text-muted/70">
-          Reservas online ·{" "}
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-muted/70">
+          <Link href="/aviso-legal" className="hover:text-ink hover:underline">
+            Aviso legal
+          </Link>
+          <Link href="/privacidad" className="hover:text-ink hover:underline">
+            Privacidad
+          </Link>
+          <Link href="/condiciones" className="hover:text-ink hover:underline">
+            Condiciones
+          </Link>
           <Link href="/admin" className="hover:text-ink hover:underline">
             Acceso profesional
           </Link>

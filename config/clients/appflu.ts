@@ -204,6 +204,25 @@ export const appflu = {
   },
 
   /* ---------------------------------------------------------------------- */
+  /*  DATOS PARA LAS PÁGINAS LEGALES                                        */
+  /*                                                                        */
+  /*  Rellenan el aviso legal, la política de privacidad y las condiciones. */
+  /*  Mientras estén vacíos, esas páginas avisan por escrito de que están   */
+  /*  incompletas: es preferible a publicar unas condiciones que aparentan  */
+  /*  estar bien y no identifican a nadie.                                  */
+  /* ---------------------------------------------------------------------- */
+  legal: {
+    /** Nombre y apellidos de quien responde legalmente del negocio. */
+    ownerLegalName: "",
+    /** NIF o NIE. */
+    taxId: "",
+    /** Domicilio a efectos legales. */
+    address: "",
+    /** Email para ejercer derechos. Vacío = se usa el de contacto del negocio. */
+    contactEmail: "",
+  },
+
+  /* ---------------------------------------------------------------------- */
   /*  PLANTONES Y CANCELACIONES TARDÍAS                                     */
   /*                                                                        */
   /*  Guardar la tarjeta al reservar para poder cobrar a quien no aparece.  */

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Archivo } from "next/font/google";
-import { Analytics } from "@vercel/analytics/next";
+import { Cookies } from "@/components/Cookies";
 import siteConfig from "@config";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
@@ -70,7 +70,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           nadie, así que no hace falta banner de consentimiento. Dice cuánta
           gente entra y a qué páginas, nunca quién.
         */}
-        <Analytics />
+        {/* Carga la analítica solo si la visitante la acepta. */}
+        <Cookies />
       </body>
     </html>
   );

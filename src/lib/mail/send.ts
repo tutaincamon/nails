@@ -29,7 +29,8 @@ export type MailKind =
   | "cancellation_client"
   | "cancellation_owner"
   | "pending_payment"
-  | "client_portal";
+  | "client_portal"
+  | "verification_code";
 
 export type Mail = {
   to: string;

@@ -434,3 +434,37 @@ export function clientPortalLink(url: string) {
     ].join("\n"),
   };
 }
+
+/* -------------------------------------------------------------------------- */
+/*  7. Código de verificación                                                 */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * El código va grande y en el asunto, porque se lee en el móvil con la web
+ * abierta al lado y lo normal es no llegar a abrir el correo entero.
+ */
+export function verificationCode(codigo: string) {
+  const body = `
+    <div style="margin:24px 0;padding:20px;background:${theme.bg};border-radius:10px;text-align:center;">
+      <p style="margin:0 0 8px;font-size:13px;color:${theme.muted};">Tu código</p>
+      <p style="margin:0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:34px;letter-spacing:.22em;font-weight:600;color:${theme.ink};">${escapeHtml(codigo)}</p>
+    </div>
+    ${calloutBox("Caduca en 10 minutos y solo sirve una vez. Si no has sido tú, puedes ignorar este correo: sin el código no se puede hacer nada.")}`;
+
+  return {
+    subject: `${codigo} · tu código para reservar en ${business.name}`,
+    html: shell({
+      preheader: `Tu código es ${codigo}.`,
+      heading: "Tu código de verificación",
+      intro: "Escríbelo en la web para recuperar tus datos y no tener que rellenarlos otra vez.",
+      body,
+      accentBar: theme.accent,
+    }),
+    text: [
+      `Tu código para ${business.name}: ${codigo}`,
+      ``,
+      `Caduca en 10 minutos y solo sirve una vez.`,
+      `Si no has sido tú, ignora este correo.`,
+    ].join("\n"),
+  };
+}

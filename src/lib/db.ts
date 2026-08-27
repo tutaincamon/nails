@@ -284,6 +284,21 @@ const SCHEMA = `
     weekday     INTEGER PRIMARY KEY,
     ranges_json TEXT NOT NULL
   );
+
+  /*
+   * Códigos de un solo uso para que una clienta que ya ha venido demuestre que
+   * ese email es suyo y recupere sus datos sin escribirlos otra vez.
+   *
+   * Se guarda el HASH del código, nunca el código: si alguien llegara a leer
+   * esta tabla, no podría usar lo que hay dentro para entrar en ninguna cuenta.
+   */
+  CREATE TABLE IF NOT EXISTS verification_codes (
+    email      TEXT PRIMARY KEY,
+    code_hash  TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    attempts   INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL
+  );
 `;
 
 /**
@@ -504,6 +519,58 @@ export async function markNoShowCharged(
     cents,
     ref,
     code,
+  ]);
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Códigos de verificación                                                   */
+/* -------------------------------------------------------------------------- */
+
+export type CodeRow = {
+  email: string;
+  code_hash: string;
+  expires_at: string;
+  attempts: number;
+  created_at: string;
+};
+
+/** Guarda el código de un email, sustituyendo el anterior si lo hubiera. */
+export async function saveCode(
+  email: string,
+  codeHash: string,
+  expiresAt: string,
+): Promise<void> {
+  const db = await driver();
+  const clave = email.trim().toLowerCase();
+  await db.run("DELETE FROM verification_codes WHERE email = ?", [clave]);
+  await db.run(
+    `INSERT INTO verification_codes (email, code_hash, expires_at, attempts, created_at)
+     VALUES (?,?,?,0,?)`,
+    [clave, codeHash, expiresAt, new Date().toISOString()],
+  );
+}
+
+export async function getCode(email: string): Promise<CodeRow | null> {
+  const db = await driver();
+  return (await db.get("SELECT * FROM verification_codes WHERE email = ?", [
+    email.trim().toLowerCase(),
+  ])) as CodeRow | null;
+}
+
+/** Suma un intento fallido. A los 5, el código deja de servir. */
+export async function bumpCodeAttempts(email: string): Promise<void> {
+  const db = await driver();
+  await db.run(
+    "UPDATE verification_codes SET attempts = attempts + 1 WHERE email = ?",
+    [email.trim().toLowerCase()],
+  );
+}
+
+/** Un código usado se borra: solo vale una vez. */
+export async function deleteCode(email: string): Promise<void> {
+  const db = await driver();
+  await db.run("DELETE FROM verification_codes WHERE email = ?", [
+    email.trim().toLowerCase(),
   ]);
 }
 

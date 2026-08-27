@@ -22,11 +22,13 @@ import { appflu } from "./appflu";
  *    3. El horario que hay aquí es solo el de partida: ella lo lleva desde
  *       /admin → Mi horario, y lo que guarde ahí manda sobre esto.
  *
- *  ÚNICO CABO SUELTO — DURACIONES. Su cartelera trae los precios pero no los
- *  tiempos, así que los durationMin de abajo son una estimación del oficio, no
- *  los suyos. Es lo que hace que la agenda cuadre: si una pedicura spa le lleva
- *  2 h y aquí pone 105 min, el sistema le mete una clienta encima, en otra casa
- *  y sin margen para llegar. Hay que repasarlos con ella uno a uno.
+ *  CABOS SUELTOS — cuatro cosas que solo puede decir ella:
+ *    · El tiempo del semipermanente a secas (está el precio, no el tiempo).
+ *    · El tiempo de las dos retiradas.
+ *    · El precio de la "Pedicura Spa (solo)", que tiene tiempo pero no precio,
+ *      así que de momento no se publica.
+ *    · Cuánto suma en tiempo el extra de tamaño, que en su hoja pone
+ *      "comunicar para ajustar".
  * ========================================================================== */
 
 export const luamiz = {
@@ -41,9 +43,15 @@ export const luamiz = {
     intro:
       "Manicura, pedicura y acrílico a domicilio en Las Palmas. Voy yo a tu casa con todo el material: no pierdes el viaje ni la sala de espera, solo eliges la hora.",
     ownerName: "Indira",
+    /*
+     * PROVISIONAL: el correo de Alejandro mientras Indira no pase el suyo. Aquí
+     * llegan los avisos de cada reserva nueva, así que en cuanto lo dé hay que
+     * cambiarlo — o ponerlo en OWNER_EMAIL, que manda sobre esto.
+     */
+    ownerEmail: "alexfoxrodillanegrin@gmail.com",
     instagram: "beautynailsindiradiazz",
     tiktok: "",
-    /* Recortado de su cartelera. Conviene pedirle el archivo original. */
+    /* El suyo, en alta resolución, recortado en círculo con fondo transparente. */
     logo: "/luamiz/logo.png",
     logoAlt: "Luamiz · manicura y pedicura a domicilio",
     address: {
@@ -94,10 +102,9 @@ export const luamiz = {
   },
 
   /*
-   * Apagado: los precios son los de su cartelera, así que la web ya se puede
-   * usar de verdad. Lo único sin confirmar son las duraciones, y eso no es algo
-   * que la clienta tenga que leer en un cartel: se arregla repasándolas con
-   * ella. Volver a encenderlo si vuelve a haber algo provisional a la vista.
+   * Apagado: precios y tiempos salen ya de sus dos carteleras, así que la web
+   * se puede usar de verdad. Volver a encenderlo si alguna vez vuelve a haber
+   * algo provisional a la vista de la clienta.
    */
   preview: {
     enabled: false,
@@ -213,8 +220,10 @@ export const luamiz = {
 
   /* ---------------------------------------------------------------------- */
   /*  SERVICIOS                                                             */
-  /*  ⚠️ SIN VERIFICAR: precios de una cartelera ajena, tiempos estimados.   */
-  /*     Es un punto de partida para que ella corrija, no una tarifa.        */
+  /*                                                                        */
+  /*  Precios de su cartelera de servicios y tiempos de su cartelera de     */
+  /*  tiempos. Los marcados con ESTIMADO son los tres que no aparecen en    */
+  /*  ninguna de las dos y siguen pendientes de que ella los diga.          */
   /* ---------------------------------------------------------------------- */
   categories: [
     {
@@ -222,63 +231,82 @@ export const luamiz = {
       name: "Manos",
       subtitle: "Manicura, semipermanente y acrílico, en tu casa.",
       addOns: [
+        /*
+         * En su hoja de tiempos, el extra de tamaño pone "comunicar para
+         * ajustar el tiempo": depende del largo. Se reservan 20 min para que
+         * la agenda no vaya justa, y ya lo afinan ellas al hablarlo.
+         */
         { id: "extra-tamano", name: "Extra de tamaño", price: 5, durationMin: 20 },
         { id: "francesa", name: "Francesa", price: 5, durationMin: 15 },
         { id: "efectos", name: "Efectos y diseños", price: 3, durationMin: 10 },
         /*
-         * En la cartelera esto era "desde 1 € por uña". El sistema no sabe
-         * cobrar por unidad, así que va el mínimo y se ajusta en la cita.
+         * "Desde 1 € por uña" en su tarifa. El sistema no sabe cobrar por
+         * unidad, así que va el mínimo y se ajusta en la cita. ESTIMADO el
+         * tiempo: no está en su hoja.
          */
         { id: "piedras", name: "Piedras o cristales", price: 1, durationMin: 10 },
-        { id: "cambio-forma", name: "Cambio de forma", price: 5, durationMin: 15 },
+        { id: "cambio-forma", name: "Cambio de forma", price: 5, durationMin: 5 },
       ],
       services: [
         {
           id: "manicura",
           name: "Manicura",
           price: 20,
-          durationMin: 45,
+          durationMin: 20,
           description: "Limado, cutícula e hidratación, sin esmaltado permanente.",
         },
         {
+          /*
+           * ESTIMADO. Es el único servicio de su tarifa que no aparece en la
+           * hoja de tiempos. Se le ponen 45 min, entre la manicura sola (20) y
+           * la que lleva refuerzo (50). Confirmar con ella.
+           */
           id: "semipermanente",
           name: "Semipermanente",
           price: 27,
-          durationMin: 75,
+          durationMin: 45,
           description: "Manicura completa y color a elegir. Dura 2–3 semanas.",
           featured: true,
         },
         {
           /*
-           * La cartelera ponía "30 € / 35 €" sin decir cuál era cuál. Va como
-           * uno solo "desde 30" hasta que lo aclare; entonces se parte en dos.
+           * Su tarifa ponía "30 € / 35 €" sin aclarar cuál era cuál. La hoja de
+           * tiempos los separa en dos servicios distintos, así que ya se sabe:
+           * refuerzo 30 € y 50 min, nivelación 35 € y 1 h.
            */
           id: "semi-refuerzo",
-          name: "Semipermanente con refuerzo o nivelación",
+          name: "Manicura con refuerzo y semipermanente",
           price: 30,
-          from: true,
-          durationMin: 95,
-          description:
-            "Para uñas finas o que se quiebran. El precio final depende de si lleva refuerzo o nivelación completa.",
+          durationMin: 50,
+          description: "Para uñas finas o que se quiebran. Refuerzo y color en la misma cita.",
           featured: true,
         },
         {
+          id: "semi-nivelacion",
+          name: "Manicura con nivelación y semipermanente",
+          price: 35,
+          durationMin: 60,
+          description: "Nivelación completa de la superficie antes del color.",
+        },
+        {
           id: "acrilico-primera",
-          name: "Acrílico · primera puesta",
+          name: "Acrílicas nuevas",
           price: 35,
           from: true,
-          durationMin: 150,
+          durationMin: 60,
           description: "Esculpido completo desde cero. El precio sube según largo y diseño.",
+          featured: true,
         },
         {
           id: "acrilico-relleno",
           name: "Relleno de acrílico",
           price: 30,
           from: true,
-          durationMin: 120,
+          durationMin: 50,
           description: "Mantenimiento cada 3–4 semanas sobre acrílico ya puesto.",
         },
         {
+          /* ESTIMADO: las retiradas no están en su hoja de tiempos. */
           id: "retirada-propia",
           name: "Retirada de trabajo mío",
           price: 10,
@@ -286,6 +314,7 @@ export const luamiz = {
           description: "Retirada cuidadosa de un trabajo hecho por mí.",
         },
         {
+          /* ESTIMADO: ídem. */
           id: "retirada-otro",
           name: "Retirada de otro centro",
           price: 15,
@@ -303,27 +332,32 @@ export const luamiz = {
         { id: "pies-efectos", name: "Efectos y diseños", price: 3, durationMin: 10 },
         { id: "pies-piedras", name: "Piedras o cristales", price: 1, durationMin: 10 },
       ],
+      /*
+       * Falta "Pedicura Spa (solo)", que sí está en su hoja de tiempos (45 min)
+       * pero no tiene precio en ninguna de las dos carteleras. No se publica un
+       * servicio con un precio inventado: en cuanto lo diga, se añade aquí.
+       */
       services: [
         {
           id: "solo-pedicura",
-          name: "Solo pedicura",
+          name: "Pedicura básica",
           price: 20,
-          durationMin: 50,
+          durationMin: 30,
           description: "Limado, cutícula y durezas, sin esmaltado permanente.",
         },
         {
           id: "pedicura-semi-seco",
-          name: "Pedicura + semipermanente en seco",
+          name: "Pedicura + semipermanente",
           price: 30,
-          durationMin: 75,
-          description: "Pedicura sin remojo y color permanente.",
+          durationMin: 60,
+          description: "Pedicura y color permanente.",
           featured: true,
         },
         {
           id: "pedicura-spa",
           name: "Pedicura spa + semipermanente",
           price: 40,
-          durationMin: 105,
+          durationMin: 90,
           description:
             "Remojo, exfoliación, limpieza profunda, masaje hidratante y color permanente.",
           featured: true,
@@ -360,7 +394,7 @@ export const luamiz = {
         "Producto profesional, instrumental esterilizado entre clientas y nada de MMA. Solo necesito una mesa despejada, una silla y un enchufe cerca.",
       ],
       /* Los cuatro reclamos de su propia cartelera. */
-      badges: ["Vamos hasta ti", "Ahorras tiempo", "Experiencia personalizada", "Calidad y resultados"],
+      badges: ["A domicilio", "Ahorro de tiempo", "Experiencia personalizada", "Calidad garantizada"],
     },
 
     /*
@@ -439,7 +473,7 @@ export const luamiz = {
       },
       {
         q: "¿Cuánto dura la cita?",
-        a: "Depende del servicio: un semipermanente son unos 75 minutos y un acrílico de primera puesta puede irse a dos horas y media. El tiempo aparece indicado en cada servicio al reservar.",
+        a: "Depende del servicio: una manicura son 20 minutos, unas acrílicas nuevas una hora y una pedicura spa con semipermanente hora y media. El tiempo aparece indicado en cada servicio al reservar. Ten en cuenta que puede variar según el diseño, el estado de tus uñas y los cuidados que hagan falta.",
       },
       {
         q: "¿Hasta dónde te desplazas?",

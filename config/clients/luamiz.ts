@@ -22,13 +22,9 @@ import { appflu } from "./appflu";
  *    3. El horario que hay aquí es solo el de partida: ella lo lleva desde
  *       /admin → Mi horario, y lo que guarde ahí manda sobre esto.
  *
- *  CABOS SUELTOS — cuatro cosas que solo puede decir ella:
- *    · El tiempo del semipermanente a secas (está el precio, no el tiempo).
- *    · El tiempo de las dos retiradas.
- *    · El precio de la "Pedicura Spa (solo)", que tiene tiempo pero no precio,
- *      así que de momento no se publica.
- *    · Cuánto suma en tiempo el extra de tamaño, que en su hoja pone
- *      "comunicar para ajustar".
+ *  Precios y tiempos son suyos, de sus dos carteleras y de lo que confirmó
+ *  después. Lo único estimado que queda son los tiempos de las dos retiradas.
+ *  La "Pedicura Spa (solo)" no se publica: nunca le puso precio.
  * ========================================================================== */
 
 export const luamiz = {
@@ -232,11 +228,10 @@ export const luamiz = {
       subtitle: "Manicura, semipermanente y acrílico, en tu casa.",
       addOns: [
         /*
-         * En su hoja de tiempos, el extra de tamaño pone "comunicar para
-         * ajustar el tiempo": depende del largo. Se reservan 20 min para que
-         * la agenda no vaya justa, y ya lo afinan ellas al hablarlo.
+         * Su hoja pone "comunicar para ajustar el tiempo", porque depende del
+         * largo. 15 min es lo que ella calcula de media.
          */
-        { id: "extra-tamano", name: "Extra de tamaño", price: 5, durationMin: 20 },
+        { id: "extra-tamano", name: "Extra de tamaño", price: 5, durationMin: 15 },
         { id: "francesa", name: "Francesa", price: 5, durationMin: 15 },
         { id: "efectos", name: "Efectos y diseños", price: 3, durationMin: 10 },
         /*
@@ -257,14 +252,15 @@ export const luamiz = {
         },
         {
           /*
-           * ESTIMADO. Es el único servicio de su tarifa que no aparece en la
-           * hoja de tiempos. Se le ponen 45 min, entre la manicura sola (20) y
-           * la que lleva refuerzo (50). Confirmar con ella.
+           * 20 min, dicho por ella. No aparecía en su hoja de tiempos.
+           * Es el servicio más ajustado de la carta: si en la práctica se le va
+           * a 30 o 40 min, hay que subirlo aquí, porque es lo que separa una
+           * cita de la siguiente.
            */
           id: "semipermanente",
           name: "Semipermanente",
           price: 27,
-          durationMin: 45,
+          durationMin: 20,
           description: "Manicura completa y color a elegir. Dura 2–3 semanas.",
           featured: true,
         },

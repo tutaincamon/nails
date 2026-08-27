@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 /*
  * Puerta de entrada al paso de datos: primero el email, y un código para
@@ -17,6 +17,38 @@ import { useState } from "react";
 
 export type DatosRecuperados = { name: string; phone: string; address: string };
 
+/*
+ * Lo único que se guarda en el navegador es este testigo firmado: no lleva su
+ * nombre, ni su teléfono, ni su dirección. Sirve para que el servidor
+ * reconozca el dispositivo durante 30 días y no le pida el código otra vez.
+ * Sus datos se piden al servidor cada vez, y solo si el testigo vale.
+ */
+const RECUERDO = "studio:dispositivo";
+
+function leerRecuerdoLocal(): string | null {
+  try {
+    return window.localStorage.getItem(RECUERDO);
+  } catch {
+    return null;
+  }
+}
+
+function guardarRecuerdoLocal(valor: string): void {
+  try {
+    window.localStorage.setItem(RECUERDO, valor);
+  } catch {
+    /* Modo incógnito: se le pedirá el código la próxima vez, sin más. */
+  }
+}
+
+export function olvidarRecuerdoLocal(): void {
+  try {
+    window.localStorage.removeItem(RECUERDO);
+  } catch {
+    /* nada que hacer */
+  }
+}
+
 export function VerificarEmail({
   onVerificado,
 }: {
@@ -24,9 +56,51 @@ export function VerificarEmail({
 }) {
   const [email, setEmail] = useState("");
   const [codigo, setCodigo] = useState("");
-  const [fase, setFase] = useState<"email" | "codigo">("email");
+  const [fase, setFase] = useState<"comprobando" | "email" | "codigo">("comprobando");
   const [error, setError] = useState<string | null>(null);
   const [trabajando, setTrabajando] = useState(false);
+
+  /*
+   * Al entrar se prueba el testigo del dispositivo. Si vale, se salta el
+   * código; si no —caducado, otro móvil, o borrado— se pide como siempre.
+   */
+  useEffect(() => {
+    const guardado = leerRecuerdoLocal();
+    if (!guardado) {
+      setFase("email");
+      return;
+    }
+    let cancelado = false;
+    (async () => {
+      try {
+        const r = await fetch("/api/verificar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ recuerdo: guardado }),
+        });
+        const d = (await r.json()) as {
+          ok: boolean;
+          email?: string;
+          pase?: string;
+          datos?: DatosRecuperados | null;
+        };
+        if (cancelado) return;
+        if (d.ok && d.email && d.pase) {
+          onVerificado(d.email, d.pase, d.datos ?? null);
+          return;
+        }
+        olvidarRecuerdoLocal();
+        setFase("email");
+      } catch {
+        if (!cancelado) setFase("email");
+      }
+    })();
+    return () => {
+      cancelado = true;
+    };
+    // Solo al montar: reintentarlo en cada render sería una llamada por tecla.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function pedirCodigo() {
     setTrabajando(true);
@@ -63,18 +137,30 @@ export function VerificarEmail({
         ok: boolean;
         error?: string;
         pase?: string;
+        recuerdo?: string;
         datos?: DatosRecuperados | null;
       };
       if (!d.ok || !d.pase) {
         setError(d.error ?? "No se pudo comprobar el código.");
         return;
       }
+      // Reconocido ya este dispositivo durante 30 días.
+      if (d.recuerdo) guardarRecuerdoLocal(d.recuerdo);
       onVerificado(email.trim().toLowerCase(), d.pase, d.datos ?? null);
     } catch {
       setError("Problema de conexión. Inténtalo otra vez.");
     } finally {
       setTrabajando(false);
     }
+  }
+
+  if (fase === "comprobando") {
+    return (
+      <div className="animate-rise mt-8">
+        <div className="h-8 w-52 animate-pulse bg-line/60" />
+        <div className="mt-4 h-24 max-w-sm animate-pulse bg-line/40" />
+      </div>
+    );
   }
 
   return (

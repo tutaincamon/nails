@@ -292,6 +292,19 @@ const SCHEMA = `
    * Se guarda el HASH del código, nunca el código: si alguien llegara a leer
    * esta tabla, no podría usar lo que hay dentro para entrar en ninguna cuenta.
    */
+  /*
+   * Horario de un día concreto, cuando esa fecha no sigue el horario de
+   * siempre. La semana que viene puede trabajar distinto que esta, y eso no
+   * cabe en un horario semanal.
+   *
+   * Solo se guardan los días que ella toca: lo que no está aquí sigue el
+   * horario semanal, así que no tiene que rellenar el calendario entero.
+   */
+  CREATE TABLE IF NOT EXISTS day_hours (
+    date        TEXT PRIMARY KEY,
+    ranges_json TEXT NOT NULL
+  );
+
   CREATE TABLE IF NOT EXISTS verification_codes (
     email      TEXT PRIMARY KEY,
     code_hash  TEXT NOT NULL,
@@ -683,6 +696,57 @@ export async function saveWeeklyHours(hours: WeeklyHours): Promise<void> {
 export async function resetWeeklyHours(): Promise<void> {
   const db = await driver();
   await db.run("DELETE FROM weekly_hours");
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Horario de días concretos                                                 */
+/* -------------------------------------------------------------------------- */
+
+export type DiasSueltos = Record<string, { start: string; end: string }[]>;
+
+/** Los días entre dos fechas que tienen horario propio. */
+export async function getDayHours(desde: string, hasta: string): Promise<DiasSueltos> {
+  const db = await driver();
+  const filas = await db.all(
+    "SELECT date, ranges_json FROM day_hours WHERE date >= ? AND date <= ?",
+    [desde, hasta],
+  );
+
+  const dias: DiasSueltos = {};
+  for (const fila of filas) {
+    try {
+      const tramos = JSON.parse(String(fila.ranges_json));
+      if (Array.isArray(tramos)) dias[String(fila.date)] = tramos;
+    } catch {
+      console.error(`[bbdd] Horario ilegible del día ${fila.date}`);
+    }
+  }
+  return dias;
+}
+
+/**
+ * Fija el horario de un día concreto.
+ *
+ * Un array vacío NO es lo mismo que borrar: vacío significa "ese día no
+ * trabajo", y borrar significa "ese día vuelve a seguir mi horario de
+ * siempre". Confundirlos abriría un día que ella había cerrado a mano.
+ */
+export async function setDayHours(
+  date: string,
+  ranges: { start: string; end: string }[],
+): Promise<void> {
+  const db = await driver();
+  await db.run("DELETE FROM day_hours WHERE date = ?", [date]);
+  await db.run("INSERT INTO day_hours (date, ranges_json) VALUES (?,?)", [
+    date,
+    JSON.stringify(ranges),
+  ]);
+}
+
+/** Devuelve ese día a su horario semanal. */
+export async function clearDayHours(date: string): Promise<void> {
+  const db = await driver();
+  await db.run("DELETE FROM day_hours WHERE date = ?", [date]);
 }
 
 export async function logEmail(row: Omit<EmailRow, "id" | "created_at">): Promise<void> {

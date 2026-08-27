@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import siteConfig from "@config";
-import type { BlockRow, BookingRow, BookingStatus, WeeklyHours } from "@/lib/db";
+import type { BlockRow, BookingRow, BookingStatus, DiasSueltos, WeeklyHours } from "@/lib/db";
+import { PlanificarMes } from "@/components/admin/PlanificarMes";
 import { formatCents } from "@/lib/money";
 import { addDays, formatDateLong, formatDuration } from "@/lib/time";
 import { StatusBadge, capitalize, parseAddOns } from "@/components/BookingDetails";
@@ -31,19 +32,22 @@ type Props = {
   hours: WeeklyHours;
   /** true si se ha editado desde el panel (y por tanto se puede deshacer). */
   hoursAreCustom: boolean;
+  /** Días concretos con horario propio, que mandan sobre el semanal. */
+  dias: DiasSueltos;
   emails: EmailSummary[];
   mailMode: "real" | "simulado";
   paymentMode: "stripe" | "demo";
   usingDefaultPassword: boolean;
 };
 
-type Tab = "resumen" | "proximas" | "historico" | "horario" | "agenda" | "emails";
+type Tab = "resumen" | "proximas" | "historico" | "horario" | "planificar" | "agenda" | "emails";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "resumen", label: "Resumen" },
   { id: "proximas", label: "Próximas citas" },
   { id: "historico", label: "Histórico" },
   { id: "horario", label: "Mi horario" },
+  { id: "planificar", label: "Planificar" },
   { id: "agenda", label: "Bloquear horas" },
   { id: "emails", label: "Emails" },
 ];
@@ -163,6 +167,9 @@ export function AdminDashboard(props: Props) {
         )}
         {tab === "horario" && (
           <ScheduleTab hours={props.hours} isCustom={props.hoursAreCustom} />
+        )}
+        {tab === "planificar" && (
+          <PlanificarMes desde={props.today} semanal={props.hours} dias={props.dias} />
         )}
         {tab === "agenda" && <BlocksTab blocks={props.blocks} today={props.today} />}
         {tab === "emails" && <EmailsTab emails={props.emails} mailMode={props.mailMode} />}

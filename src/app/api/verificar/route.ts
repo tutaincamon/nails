@@ -1,5 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { prepararCodigo, comprobarCodigo } from "@/lib/verification";
+import {
+  comprobarCodigo,
+  crearPase,
+  datosDe,
+  leerRecuerdo,
+  prepararCodigo,
+} from "@/lib/verification";
 import { verificationCode } from "@/lib/mail/templates";
 import { sendAll } from "@/lib/mail/send";
 
@@ -21,6 +27,22 @@ export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   const email = typeof body.email === "string" ? body.email.trim() : "";
   const codigo = typeof body.codigo === "string" ? body.codigo.trim() : "";
+  const recuerdo = typeof body.recuerdo === "string" ? body.recuerdo : "";
+
+  /* --- Dispositivo ya reconocido: sin código ---------------------------- */
+  if (recuerdo) {
+    const reconocido = leerRecuerdo(recuerdo);
+    if (!reconocido) {
+      // Caducado o manipulado: que vuelva a pasar por el código.
+      return NextResponse.json({ ok: false, error: "caducado" }, { status: 401 });
+    }
+    return NextResponse.json({
+      ok: true,
+      email: reconocido,
+      pase: crearPase(reconocido),
+      datos: await datosDe(reconocido),
+    });
+  }
 
   if (!EMAIL_RE.test(email)) {
     return NextResponse.json({ ok: false, error: "Escribe un email válido." }, { status: 400 });
@@ -38,6 +60,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       pase: resultado.pase,
+      recuerdo: resultado.recuerdo,
       datos: resultado.datos,
       esNueva: resultado.datos === null,
     });

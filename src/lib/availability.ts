@@ -2,9 +2,11 @@ import siteConfig, { type TimeRange } from "@config";
 import {
   blocksBetween,
   bookingsBetween,
+  getDayHours,
   getWeeklyHours,
   type BlockRow,
   type BookingRow,
+  type DiasSueltos,
   type WeeklyHours,
 } from "@/lib/db";
 import {
@@ -57,9 +59,21 @@ export async function effectiveHours(): Promise<WeeklyHours> {
   }
 }
 
-/** Franjas de trabajo de un día, dado el horario ya resuelto. */
-export function workingRanges(date: string, hours: WeeklyHours): TimeRange[] {
+/**
+ * Franjas de trabajo de un día.
+ *
+ * Manda lo más concreto: si esa fecha tiene horario propio, es el que vale,
+ * aunque sea una lista vacía —que significa "ese día no trabajo"—. Solo cuando
+ * la fecha no está planificada se recurre al horario semanal.
+ */
+export function workingRanges(
+  date: string,
+  hours: WeeklyHours,
+  dias: DiasSueltos = {},
+): TimeRange[] {
   if (siteConfig.closedDates.includes(date)) return [];
+  const propio = dias[date];
+  if (propio) return propio;
   return hours[weekdayOf(date)] ?? [];
 }
 
@@ -105,10 +119,13 @@ export async function availabilityRange(
   const now = nowInBusinessTz();
   const lastDate = addDays(fromDate, Math.max(0, days - 1));
   // El horario se lee una sola vez para todo el rango, no una por día.
-  const [bookings, blocks, hours] = await Promise.all([
+  const [bookings, blocks, hours, dias] = await Promise.all([
     bookingsBetween(fromDate, lastDate),
     blocksBetween(fromDate, lastDate),
     effectiveHours(),
+    // Si esta consulta fallara, se sigue con el horario semanal antes que
+    // dejar la agenda entera cerrada.
+    getDayHours(fromDate, lastDate).catch(() => ({}) as DiasSueltos),
   ]);
 
   const result: DayAvailability[] = [];
@@ -126,7 +143,7 @@ export async function availabilityRange(
       continue;
     }
 
-    const ranges = workingRanges(date, hours);
+    const ranges = workingRanges(date, hours, dias);
     if (ranges.length === 0) {
       result.push({ date, closed: true, closedReason: "Cerrado", slots: [] });
       continue;

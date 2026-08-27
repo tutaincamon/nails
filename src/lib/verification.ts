@@ -73,7 +73,7 @@ export async function prepararCodigo(email: string): Promise<EnvioResultado> {
 export type DatosClienta = { name: string; phone: string; address: string };
 
 export type ComprobarResultado =
-  | { ok: true; datos: DatosClienta | null; pase: string }
+  | { ok: true; datos: DatosClienta | null; pase: string; recuerdo: string }
   | { ok: false; error: string };
 
 /* -------------------------------------------------------------------------- */
@@ -90,28 +90,46 @@ export type ComprobarResultado =
  */
 const PASE_MS = 2 * 60 * 60 * 1000;
 
-function firmarPase(carga: string): string {
-  return createHash("sha256").update(`${carga}|${adminPassword()}`).digest("hex").slice(0, 32);
+/*
+ * Y el recuerdo del dispositivo: 30 días. Pedirle el código cada vez a quien
+ * reserva desde su propio móvil cada tres semanas es fricción que no compra
+ * nada, porque quien tiene ese móvil desbloqueado ya tiene su correo dentro.
+ *
+ * Lo que se guarda en el navegador es SOLO este testigo firmado. Sus datos
+ * siguen sin escribirse en el dispositivo: se piden al servidor cada vez, y
+ * solo si el testigo es válido.
+ */
+const RECUERDO_MS = 30 * 24 * 60 * 60 * 1000;
+
+/*
+ * Los dos llevan una marca distinta dentro. Así un recuerdo de 30 días no
+ * puede colarse como pase de reserva ni al revés: aunque los dos estén
+ * firmados con la misma clave, sirven para cosas distintas.
+ */
+function firmar(tipo: string, carga: string): string {
+  return createHash("sha256")
+    .update(`${tipo}|${carga}|${adminPassword()}`)
+    .digest("hex")
+    .slice(0, 32);
 }
 
-export function crearPase(email: string, ahora = Date.now()): string {
-  const carga = `${email.trim().toLowerCase()}|${ahora + PASE_MS}`;
-  return `${Buffer.from(carga, "utf8").toString("base64url")}.${firmarPase(carga)}`;
+function crearTestigo(tipo: string, email: string, vida: number, ahora: number): string {
+  const carga = `${email.trim().toLowerCase()}|${ahora + vida}`;
+  return `${Buffer.from(carga, "utf8").toString("base64url")}.${firmar(tipo, carga)}`;
 }
 
-/** Devuelve el email verificado, o null si el pase no vale o ha caducado. */
-export function leerPase(pase: string, ahora = Date.now()): string | null {
-  const corte = pase.lastIndexOf(".");
+function leerTestigoFirmado(tipo: string, testigo: string, ahora: number): string | null {
+  const corte = testigo.lastIndexOf(".");
   if (corte <= 0) return null;
 
   let carga: string;
   try {
-    carga = Buffer.from(pase.slice(0, corte), "base64url").toString("utf8");
+    carga = Buffer.from(testigo.slice(0, corte), "base64url").toString("utf8");
   } catch {
     return null;
   }
 
-  if (!comparar(pase.slice(corte + 1), firmarPase(carga))) return null;
+  if (!comparar(testigo.slice(corte + 1), firmar(tipo, carga))) return null;
 
   const sep = carga.lastIndexOf("|");
   if (sep <= 0) return null;
@@ -119,6 +137,24 @@ export function leerPase(pase: string, ahora = Date.now()): string | null {
   if (!Number.isFinite(caduca) || ahora > caduca) return null;
 
   return carga.slice(0, sep);
+}
+
+export function crearPase(email: string, ahora = Date.now()): string {
+  return crearTestigo("pase", email, PASE_MS, ahora);
+}
+
+/** Devuelve el email verificado, o null si el pase no vale o ha caducado. */
+export function leerPase(pase: string, ahora = Date.now()): string | null {
+  return leerTestigoFirmado("pase", pase, ahora);
+}
+
+export function crearRecuerdo(email: string, ahora = Date.now()): string {
+  return crearTestigo("dispositivo", email, RECUERDO_MS, ahora);
+}
+
+/** Email del dispositivo reconocido, o null si caducó o no vale. */
+export function leerRecuerdo(recuerdo: string, ahora = Date.now()): string | null {
+  return leerTestigoFirmado("dispositivo", recuerdo, ahora);
 }
 
 /** Comprueba el código y, si vale, devuelve los datos de su última cita. */
@@ -165,18 +201,17 @@ export async function comprobarCodigo(
    * todo. Que la respuesta sea la misma en los dos casos —un pase válido— es lo
    * que hace que esto no sirva para averiguar quién es clienta.
    */
+  return { ok: true, pase: crearPase(email), recuerdo: crearRecuerdo(email), datos: await datosDe(email) };
+}
+
+/** Los datos de su última cita, o null si nunca ha reservado. */
+export async function datosDe(email: string): Promise<DatosClienta | null> {
   const citas = await bookingsForEmail(email, 1);
   const ultima = citas[0];
-
+  if (!ultima) return null;
   return {
-    ok: true,
-    pase: crearPase(email),
-    datos: ultima
-      ? {
-          name: ultima.client_name,
-          phone: ultima.client_phone,
-          address: ultima.client_address,
-        }
-      : null,
+    name: ultima.client_name,
+    phone: ultima.client_phone,
+    address: ultima.client_address,
   };
 }

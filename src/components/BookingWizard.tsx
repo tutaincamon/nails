@@ -4,7 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import siteConfig from "@config";
 import { addOnsForService, quote } from "@/lib/catalog";
-import { VerificarEmail, type DatosRecuperados } from "@/components/VerificarEmail";
+import {
+  VerificarEmail,
+  olvidarRecuerdoLocal,
+  type DatosRecuperados,
+} from "@/components/VerificarEmail";
 import { formatCents } from "@/lib/money";
 import { addDays, formatDateLong, formatDateShort, formatDuration, toMinutes } from "@/lib/time";
 
@@ -43,6 +47,14 @@ export function BookingWizard() {
     setPase(nuevoPase);
     setForm((actual) => ({ ...actual, email, ...(datos ?? {}) }));
     setRecordada(datos !== null);
+  }
+
+  /** Desvincula este dispositivo y vuelve a la pantalla del email. */
+  function olvidarDispositivo() {
+    olvidarRecuerdoLocal();
+    setPase(null);
+    setRecordada(false);
+    setForm({ name: "", email: "", phone: "", address: "", notes: "" });
   }
 
   const [accepted, setAccepted] = useState(false);
@@ -358,7 +370,19 @@ export function BookingWizard() {
             </p>
 
             <p className="mt-3 border border-line bg-surface px-4 py-2.5 text-[12.5px] leading-relaxed text-muted">
-              Email verificado: <strong className="text-ink">{form.email}</strong>
+              Email verificado: <strong className="text-ink">{form.email}</strong>{" "}
+              {/*
+                Imprescindible en un móvil compartido: sin esta salida, quien
+                lo coja después reservaría con el correo de la anterior y vería
+                su nombre, su teléfono y su dirección.
+              */}
+              <button
+                type="button"
+                onClick={olvidarDispositivo}
+                className="font-semibold text-primary underline underline-offset-2"
+              >
+                No soy yo
+              </button>
             </p>
 
             <div className="mt-6 grid gap-4 sm:grid-cols-2">

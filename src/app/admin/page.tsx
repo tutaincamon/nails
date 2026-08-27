@@ -3,7 +3,13 @@ import siteConfig from "@config";
 import { AdminLogin } from "@/components/admin/AdminLogin";
 import { AdminDashboard } from "@/components/admin/AdminDashboard";
 import { isAdmin, usingDefaultPassword } from "@/lib/admin-auth";
-import { allBookings, blocksBetween, getWeeklyHours, recentEmails } from "@/lib/db";
+import {
+  allBookings,
+  blocksBetween,
+  getDayHours,
+  getWeeklyHours,
+  recentEmails,
+} from "@/lib/db";
 import { isRealMailConfigured } from "@/lib/mail/send";
 import { isStripeConfigured } from "@/lib/payments";
 import { buildStats } from "@/lib/stats";
@@ -27,6 +33,9 @@ export default async function AdminPage() {
   // Se distingue para poder ofrecer el botón de «volver al horario original».
   const savedHours = await getWeeklyHours();
 
+  // Los días planificados de las próximas semanas, para la pestaña Planificar.
+  const dias = await getDayHours(addDays(today, -7), addDays(today, 45));
+
   // El HTML completo de cada email solo se pide al abrirlo, para no cargar de más.
   const emails = (await recentEmails(40)).map((email) => ({
     id: email.id,
@@ -47,6 +56,7 @@ export default async function AdminPage() {
       blocks={blocks}
       hours={savedHours ?? siteConfig.hours}
       hoursAreCustom={savedHours !== null}
+      dias={dias}
       emails={emails}
       mailMode={isRealMailConfigured() ? "real" : "simulado"}
       paymentMode={isStripeConfigured() ? "stripe" : "demo"}

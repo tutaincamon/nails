@@ -254,8 +254,17 @@ function BookingCard({ booking }: { booking: BookingRow }) {
     router.refresh();
   }
 
-  /** La cita ya pasó: hasta entonces la clienta todavía puede aparecer. */
+  /*
+   * Se puede cobrar si la cita ya pasó (no se presentó) o si la canceló ella
+   * fuera de plazo: en ese caso el hueco ya está perdido aunque la fecha no
+   * haya llegado. Una cita futura que sigue en pie no se cobra.
+   */
   const isPast = new Date(`${booking.date}T${booking.end_time}`) < new Date();
+  const horasParaLaCita =
+    (new Date(`${booking.date}T${booking.start_time}`).getTime() - Date.now()) / 3_600_000;
+  const canceladaTarde =
+    booking.status === "cancelled" && horasParaLaCita < siteConfig.booking.cancellationHours;
+  const sePuedeCobrar = isPast || canceladaTarde;
 
   async function chargeNoShow() {
     const percent = siteConfig.noShow.chargePercent;
@@ -388,14 +397,14 @@ function BookingCard({ booking }: { booking: BookingRow }) {
         {siteConfig.noShow.enabled &&
           booking.card_label &&
           booking.no_show_cents === 0 &&
-          isPast && (
+          sePuedeCobrar && (
             <button
               type="button"
               className="btn-sm border border-line text-red-700 transition-colors hover:border-red-300 hover:bg-red-50"
               disabled={working}
               onClick={chargeNoShow}
             >
-              Cobrar por no presentarse
+              {canceladaTarde ? "Cobrar cancelación tardía" : "Cobrar por no presentarse"}
             </button>
           )}
         {booking.status === "pending_payment" && (

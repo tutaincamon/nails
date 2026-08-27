@@ -171,25 +171,22 @@ export const luamiz = {
     hoursBefore: 48,
     chargePercent: 100,
     terms:
-      "Guardo tu tarjeta para asegurar la cita: ahora solo se te cobra la señal. Si cancelas con menos de 48 h de antelación o no acudes, se cobra el 100 % del servicio.",
+      "Reservar es gratis y ahora no se te cobra nada: solo guardo tu tarjeta para asegurar la cita. Si cancelas con menos de 48 h de antelación o no acudes, se cobra el 100 % del servicio.",
   },
 
   /*
-   * Con desplazamiento, un plantón no es una hora perdida: es el viaje también.
-   * Por eso la señal aquí importa más que en un estudio.
+   * Reservar es GRATIS: no se cobra señal ni nada por adelantado. Lo que
+   * protege el hueco no es un pago, es la tarjeta registrada (ver noShow).
+   *
+   * Es a propósito y no un descuido: pedir dinero por adelantado espanta a
+   * clientas nuevas, mientras que dejar la tarjeta sin cargo no cuesta nada a
+   * quien piensa venir y solo pesa sobre quien no aparece.
    */
   deposit: {
     ...appflu.deposit,
-    enabled: true,
-    mode: "fixed" as "fixed" | "percent",
-    amount: 10,
-    /*
-     * Sin opción de pagar todo en la cita: la tarjeta se guarda en la pantalla
-     * de pago de la señal, así que quien no pasa por ahí se queda sin tarjeta
-     * guardada y la política de plantones no le aplica. Un solo camino.
-     */
-    allowPayOnSite: false,
-    note: "La señal se descuenta del precio final. Si cancelas con más de 48 h de antelación, se devuelve entera.",
+    enabled: false,
+    amount: 0,
+    note: "",
   },
 
   /*
@@ -477,7 +474,7 @@ export const luamiz = {
       },
       {
         q: "¿Tengo que pagar algo al reservar?",
-        a: "Se pide una señal para asegurar el hueco, que se descuenta del precio final. El resto se paga en el momento, en efectivo o Bizum.",
+        a: "No, reservar es gratis y no se te cobra nada. Solo te pido registrar una tarjeta para asegurar el hueco: no se le hace ningún cargo, y solo se usaría si cancelas con menos de 48 h o no acudes. El servicio lo pagas en la cita, en efectivo o Bizum.",
       },
       {
         q: "¿Puedo cancelar?",

@@ -18,11 +18,14 @@ export function PaymentPanel({
   token,
   amountLabel,
   stripeReady,
+  soloTarjeta = false,
 }: {
   code: string;
   token: string;
   amountLabel: string;
   stripeReady: boolean;
+  /** true cuando no se cobra nada y esta pantalla solo registra la tarjeta. */
+  soloTarjeta?: boolean;
 }) {
   const router = useRouter();
   const [working, setWorking] = useState<null | "pay" | "decline">(null);
@@ -96,7 +99,11 @@ export function PaymentPanel({
           disabled={working !== null}
           onClick={payWithStripe}
         >
-          {working ? "Abriendo pago seguro…" : `Pagar ${amountLabel}`}
+          {working
+            ? "Abriendo pantalla segura…"
+            : soloTarjeta
+              ? "Registrar mi tarjeta"
+              : `Pagar ${amountLabel}`}
         </button>
       ) : (
         <div className="border-2 border-dashed border-accent bg-surface p-5">
@@ -116,7 +123,11 @@ export function PaymentPanel({
               disabled={working !== null}
               onClick={() => simulate("success")}
             >
-              {working === "pay" ? "Procesando…" : `Simular pago correcto (${amountLabel})`}
+              {working === "pay"
+                ? "Procesando…"
+                : soloTarjeta
+                  ? "Simular tarjeta registrada"
+                  : `Simular pago correcto (${amountLabel})`}
             </button>
             <button
               type="button"
@@ -124,7 +135,7 @@ export function PaymentPanel({
               disabled={working !== null}
               onClick={() => simulate("declined")}
             >
-              {working === "decline" ? "Procesando…" : "Simular pago rechazado"}
+              {working === "decline" ? "Procesando…" : soloTarjeta ? "Simular tarjeta rechazada" : "Simular pago rechazado"}
             </button>
           </div>
 

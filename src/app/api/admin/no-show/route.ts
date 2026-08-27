@@ -3,6 +3,7 @@ import siteConfig from "@config";
 import { isAdmin } from "@/lib/admin-auth";
 import { getBooking, markNoShowCharged, updateBookingStatus } from "@/lib/db";
 import { chargeNoShow } from "@/lib/payments";
+import { noShowCents } from "@/lib/policy";
 import { hoursUntil } from "@/lib/time";
 
 export const runtime = "nodejs";
@@ -36,26 +37,34 @@ export async function POST(request: NextRequest) {
   }
 
   /*
-   * Nunca antes de que pase la hora de la cita: hasta ese momento la clienta
-   * todavía puede presentarse, y un cobro adelantado sería injustificable.
+   * Se puede cobrar en dos situaciones, y solo en esas dos:
+   *   · La cita ya pasó y no se presentó.
+   *   · La canceló ella misma fuera de plazo, aunque la cita aún no haya
+   *     llegado: ahí el hueco ya está perdido y la política se aplica igual.
+   *
+   * Lo que no se puede es cobrar una cita futura que sigue en pie: hasta la
+   * hora, la clienta todavía puede aparecer.
    */
-  if (hoursUntil(booking.date, booking.start_time) > 0) {
+  const quedan = hoursUntil(booking.date, booking.start_time);
+  const yaPaso = quedan <= 0;
+  const canceladaTarde = booking.status === "cancelled" && quedan < siteConfig.booking.cancellationHours;
+
+  if (!yaPaso && !canceladaTarde) {
     return NextResponse.json(
-      { ok: false, error: "La cita todavía no ha pasado." },
+      { ok: false, error: "La cita todavía no ha pasado y sigue en pie." },
       { status: 400 },
     );
   }
 
   /*
-   * El importe se calcula aquí con el precio guardado en la reserva, no con lo
-   * que mande el navegador: es dinero real de una tarjeta ajena.
+   * El importe se calcula aquí, con el precio guardado en la reserva y nunca
+   * con lo que mande el navegador: es dinero real de una tarjeta ajena.
    */
-  const percent = Math.min(100, Math.max(0, siteConfig.noShow.chargePercent));
-  const amount = Math.round((booking.price_cents * percent) / 100) - booking.deposit_cents;
+  const amount = noShowCents(booking);
 
   if (amount <= 0) {
     return NextResponse.json(
-      { ok: false, error: "Con la señal ya cobrada no queda nada que cobrar." },
+      { ok: false, error: "No queda nada que cobrar en esta reserva." },
       { status: 400 },
     );
   }

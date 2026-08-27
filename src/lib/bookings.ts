@@ -19,7 +19,7 @@ import {
   updateBookingStatus,
   type BookingRow,
 } from "@/lib/db";
-import type { SavedCard } from "@/lib/payments";
+import { isStripeConfigured, type SavedCard } from "@/lib/payments";
 import {
   cancellationNotice,
   clientConfirmation,
@@ -118,13 +118,23 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
   const wantsDeposit =
     siteConfig.deposit.enabled && q.depositCents > 0 && input.payment === "deposit";
 
+  /*
+   * Sin señal pero con política de plantones, la clienta tiene que pasar igual
+   * por Stripe: no para pagar —reservar es gratis— sino para dejar la tarjeta.
+   * Y hasta que la deja, la cita NO se confirma: si se confirmara antes, quien
+   * abandonase esa pantalla tendría el hueco cogido sin nada que respaldarlo,
+   * que es exactamente el plantón contra el que se está protegiendo.
+   */
+  const needsCard = !wantsDeposit && siteConfig.noShow.enabled && isStripeConfigured();
+  const needsCheckout = wantsDeposit || needsCard;
+
   const code = newCode();
   const token = randomBytes(16).toString("hex");
 
   const row = {
     code,
     created_at: new Date().toISOString(),
-    status: (wantsDeposit ? "pending_payment" : "confirmed") as BookingRow["status"],
+    status: (needsCheckout ? "pending_payment" : "confirmed") as BookingRow["status"],
     service_id: q.service.id,
     service_name: q.service.name,
     category_name: q.service.categoryName,
@@ -162,7 +172,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
 
   const links = { manage: manageUrl(code, token), pay: payUrl(code, token) };
 
-  if (wantsDeposit) {
+  if (needsCheckout) {
     // Aún no está confirmada: solo se avisa a la clienta de que falta la señal.
     const pending = pendingPaymentNotice(booking, links.pay);
     await sendAll([
@@ -177,7 +187,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     await notifyConfirmed(booking);
   }
 
-  return { ok: true, booking, needsPayment: wantsDeposit, manageUrl: links.manage, payUrl: links.pay };
+  return { ok: true, booking, needsPayment: needsCheckout, manageUrl: links.manage, payUrl: links.pay };
 }
 
 /** Confirmación a la clienta + aviso a la profesional. */
@@ -218,7 +228,16 @@ export async function confirmDeposit(code: string, paymentRef: string, card?: Sa
     await saveCardOnFile(code, card.customerId, card.paymentMethodId, card.label);
   }
 
-  await markDepositPaid(code, paymentRef);
+  /*
+   * Si no había señal que cobrar, no se marca ninguna como pagada: solo se
+   * confirma la cita. Marcarla dejaría constancia de un cobro que no existió y
+   * la clienta vería "señal pagada: 0 €" en su email.
+   */
+  if (before.deposit_cents > 0) {
+    await markDepositPaid(code, paymentRef);
+  } else {
+    await updateBookingStatus(code, "confirmed");
+  }
   const booking = (await getBooking(code))!;
   await notifyConfirmed(booking);
   return { ok: true as const, booking, alreadyPaid: false };
@@ -238,12 +257,24 @@ export async function cancelBooking(code: string, token: string) {
   }
 
   const remaining = hoursUntil(booking.date, booking.start_time);
-  if (remaining < siteConfig.booking.cancellationHours) {
+
+  /*
+   * Cancelar tarde SÍ se permite. Antes se bloqueaba, y el efecto era el
+   * contrario del que se buscaba: la clienta que sabía que no iba a poder ir se
+   * encontraba una puerta cerrada, no avisaba, y el hueco se perdía igual sin
+   * que nadie se enterara hasta la hora de la cita. Es mejor que avise, aunque
+   * sea tarde, y que sepa lo que le cuesta al pulsar el botón.
+   *
+   * La cita ya pasada es otra cosa: ahí no hay nada que cancelar.
+   */
+  if (remaining < 0) {
     return {
       ok: false as const,
-      error: `Ya no se puede cancelar online (quedan menos de ${siteConfig.booking.cancellationHours} h). Para anularla, ${contactSentence()}.`,
+      error: `Esa cita ya ha pasado. Si necesitas algo, ${contactSentence()}.`,
     };
   }
+
+  const tarde = remaining < siteConfig.booking.cancellationHours;
 
   await updateBookingStatus(code, "cancelled");
   const cancelled = (await getBooking(code))!;
@@ -253,17 +284,17 @@ export async function cancelBooking(code: string, token: string) {
       to: cancelled.client_email,
       kind: "cancellation_client",
       bookingCode: code,
-      ...cancellationNotice(cancelled, false),
+      ...cancellationNotice(cancelled, false, tarde),
     },
     {
       to: ownerEmail(),
       kind: "cancellation_owner",
       bookingCode: code,
-      ...cancellationNotice(cancelled, true),
+      ...cancellationNotice(cancelled, true, tarde),
     },
   ]);
 
-  return { ok: true as const, booking: cancelled, alreadyCancelled: false };
+  return { ok: true as const, booking: cancelled, alreadyCancelled: false, tarde };
 }
 
 /* -------------------------------------------------------------------------- */

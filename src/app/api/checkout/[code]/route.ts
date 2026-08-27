@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import siteConfig from "@config";
 import { getBooking } from "@/lib/db";
 import { createCheckout } from "@/lib/payments";
 
@@ -26,7 +27,12 @@ export async function POST(
   if (booking.deposit_status === "paid") {
     return NextResponse.json({ ok: true, mode: "already_paid" });
   }
-  if (booking.deposit_cents <= 0) {
+  /*
+   * Sin señal la pantalla sigue haciendo falta si hay que registrar la tarjeta.
+   * Solo se sale de aquí cuando no hay ni lo uno ni lo otro.
+   */
+  const pideTarjeta = siteConfig.noShow.enabled && !booking.card_payment_method;
+  if (booking.deposit_cents <= 0 && !pideTarjeta) {
     return NextResponse.json({ ok: true, mode: "not_required" });
   }
 

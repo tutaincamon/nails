@@ -8,6 +8,7 @@ import { getBooking } from "@/lib/db";
 import { isStripeConfigured } from "@/lib/payments";
 import { formatCents } from "@/lib/money";
 import { formatDateLong } from "@/lib/time";
+import { noShowCents } from "@/lib/policy";
 import { contactSentence } from "@/lib/business";
 
 export const dynamic = "force-dynamic";
@@ -39,8 +40,16 @@ export default async function PaymentPage({ params, searchParams }: Props) {
     );
   }
 
-  // Nada que pagar: se va directo a la ficha de la cita.
-  if (booking.deposit_status === "paid" || booking.deposit_cents <= 0) {
+  const cobraSenal = booking.deposit_cents > 0;
+  /*
+   * Sin señal, esta pantalla sigue haciendo falta: es donde se registra la
+   * tarjeta. Si aquí se redirigiera por no haber importe que cobrar, la cita se
+   * quedaría pendiente para siempre y sin tarjeta con la que respaldarla.
+   */
+  const pideTarjeta = siteConfig.noShow.enabled && !booking.card_payment_method;
+
+  // Ya no hay nada que hacer aquí: a la ficha de la cita.
+  if (booking.deposit_status === "paid" || (!cobraSenal && !pideTarjeta)) {
     redirect(`/reserva/${code}?t=${token}`);
   }
 
@@ -48,15 +57,23 @@ export default async function PaymentPage({ params, searchParams }: Props) {
     <div className="section max-w-2xl py-12 lg:py-16">
       <p className="eyebrow">Último paso</p>
       <h1 className="mt-2 text-[clamp(1.9rem,5vw,2.7rem)]">
-        Señal de {formatCents(booking.deposit_cents)}
+        {cobraSenal ? `Señal de ${formatCents(booking.deposit_cents)}` : "Confirma tu tarjeta"}
       </h1>
+      {!cobraSenal && (
+        <p className="mt-3 border border-line bg-surface px-4 py-3 text-[14px] leading-relaxed text-ink">
+          <strong>Reservar es gratis y ahora no se te cobra nada.</strong> Solo dejo registrada la
+          tarjeta por si no puedes venir: si cancelas con menos de{" "}
+          {siteConfig.booking.cancellationHours} h o no acudes, se cobra{" "}
+          {formatCents(noShowCents(booking))}.
+        </p>
+      )}
       <p className="mt-3 text-[15px] leading-relaxed text-muted">
         Te tengo guardado el hueco del{" "}
         <strong className="font-semibold text-ink">
           {formatDateLong(booking.date)} a las {booking.start_time}
         </strong>
-        . En cuanto se abone la señal, la cita queda confirmada y te llega el email de
-        confirmación.
+        . En cuanto {cobraSenal ? "se abone la señal" : "quede registrada la tarjeta"}, la cita
+        queda confirmada y te llega el email de confirmación.
         {/*
           Antes decía "el email con la dirección", que solo tiene sentido cuando
           la clienta va al estudio. A domicilio la dirección la pone ella, así
@@ -77,6 +94,7 @@ export default async function PaymentPage({ params, searchParams }: Props) {
           token={booking.manage_token}
           amountLabel={formatCents(booking.deposit_cents)}
           stripeReady={isStripeConfigured()}
+          soloTarjeta={!cobraSenal}
         />
       </div>
 
@@ -85,7 +103,17 @@ export default async function PaymentPage({ params, searchParams }: Props) {
       </div>
 
       <p className="mt-6 text-[13px] leading-relaxed text-muted">
-        {siteConfig.deposit.note} Si prefieres pagarlo todo {siteConfig.venue.payWhere}, {contactSentence()}.
+        {cobraSenal ? (
+          <>
+            {siteConfig.deposit.note} Si prefieres pagarlo todo {siteConfig.venue.payWhere},{" "}
+            {contactSentence()}.
+          </>
+        ) : (
+          <>
+            El servicio se paga {siteConfig.venue.payWhere}. Si tienes cualquier duda,{" "}
+            {contactSentence()}.
+          </>
+        )}
       </p>
     </div>
   );

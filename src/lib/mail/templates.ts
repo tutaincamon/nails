@@ -3,6 +3,7 @@ import type { BookingRow } from "@/lib/db";
 import { formatCents } from "@/lib/money";
 import { formatDateLong, formatDuration } from "@/lib/time";
 import { ownerEmail } from "@/lib/business";
+import { noShowCents } from "@/lib/policy";
 import { contactSentence } from "@/lib/business";
 
 /*
@@ -293,7 +294,7 @@ export function clientReminder(booking: BookingRow, manageUrl: string) {
 /* -------------------------------------------------------------------------- */
 /*  4. Cancelación                                                            */
 /* -------------------------------------------------------------------------- */
-export function cancellationNotice(booking: BookingRow, forOwner: boolean) {
+export function cancellationNotice(booking: BookingRow, forOwner: boolean, tarde = false) {
   const refundLine =
     booking.deposit_status === "paid"
       ? forOwner
@@ -301,8 +302,23 @@ export function cancellationNotice(booking: BookingRow, forOwner: boolean) {
         : `${deposit.note}`
       : "";
 
+  /*
+   * Cuando cancela fuera de plazo, este correo es el justificante de lo que se
+   * le va a cobrar, así que lleva la cifra. A la profesional se le dice además
+   * que el cobro no es automático: lo lanza ella desde el panel, y así puede
+   * perdonarlo si la clienta tenía un motivo.
+   */
+  const importe = noShowCents(booking);
+  const lateLine =
+    tarde && importe > 0
+      ? forOwner
+        ? `Ha cancelado con menos de ${siteConfig.booking.cancellationHours} h. Puedes cobrarle ${formatCents(importe)} desde el panel, en la ficha de la cita. No se cobra solo.`
+        : `Has cancelado con menos de ${siteConfig.booking.cancellationHours} h de antelación, así que se te cobrarán <strong>${formatCents(importe)}</strong> a la tarjeta que dejaste al reservar.`
+      : "";
+
   const body = `
     ${detailsTable(booking)}
+    ${lateLine ? calloutBox(lateLine) : ""}
     ${refundLine ? calloutBox(refundLine) : ""}
     ${
       forOwner
@@ -329,8 +345,17 @@ export function cancellationNotice(booking: BookingRow, forOwner: boolean) {
       `Servicio: ${booking.service_name}`,
       `Día: ${formatDateLong(booking.date)} ${booking.start_time}`,
       `Código: ${booking.code}`,
+      // Sin etiquetas: el aviso del cargo también tiene que estar aquí, porque
+      // hay quien lee el correo en texto plano y es la parte que cuesta dinero.
+      tarde && importe > 0
+        ? forOwner
+          ? `Cancelación tardía: puedes cobrarle ${formatCents(importe)} desde el panel.`
+          : `Cancelación con menos de ${siteConfig.booking.cancellationHours} h: se te cobrarán ${formatCents(importe)}.`
+        : "",
       refundLine,
-    ].join("\n"),
+    ]
+      .filter(Boolean)
+      .join("\n"),
   };
 }
 
@@ -338,24 +363,41 @@ export function cancellationNotice(booking: BookingRow, forOwner: boolean) {
 /*  5. Pendiente de pago (si abandona el checkout)                            */
 /* -------------------------------------------------------------------------- */
 export function pendingPaymentNotice(booking: BookingRow, payUrl: string) {
+  /*
+   * Este correo sirve para dos casos que la clienta vive muy distinto: pagar
+   * una señal, o registrar la tarjeta sin que se le cobre nada. Decirle
+   * "falta la señal" cuando reservar es gratis la asustaría para nada.
+   */
+  const cobraSenal = booking.deposit_cents > 0;
+
+  const aviso = cobraSenal
+    ? `Tu hueco está guardado pero <strong>la cita no queda confirmada</strong> hasta que se abone la señal de ${formatCents(booking.deposit_cents)}.`
+    : `Tu hueco está guardado pero <strong>la cita no queda confirmada</strong> hasta que registres una tarjeta. <strong>No se te cobra nada ahora:</strong> solo queda guardada por si no puedes venir, y en ese caso se cobrarían ${formatCents(noShowCents(booking))}.`;
+
   const body = `
     ${detailsTable(booking)}
-    ${calloutBox(`Tu hueco está guardado pero <strong>la cita no queda confirmada</strong> hasta que se abone la señal de ${formatCents(booking.deposit_cents)}.`)}
-    ${button(payUrl, `Pagar la señal (${formatCents(booking.deposit_cents)})`)}`;
+    ${calloutBox(aviso)}
+    ${button(payUrl, cobraSenal ? `Pagar la señal (${formatCents(booking.deposit_cents)})` : "Registrar mi tarjeta")}`;
 
   return {
     subject: `Termina tu reserva · ${formatDateLong(booking.date)} a las ${booking.start_time}`,
     html: shell({
-      preheader: "Falta la señal para confirmar tu cita.",
+      preheader: cobraSenal
+        ? "Falta la señal para confirmar tu cita."
+        : "Falta registrar la tarjeta para confirmar tu cita.",
       heading: "Falta un paso",
-      intro: "Te he guardado el hueco, pero queda pendiente la señal para confirmarlo.",
+      intro: cobraSenal
+        ? "Te he guardado el hueco, pero queda pendiente la señal para confirmarlo."
+        : "Te he guardado el hueco. Para confirmarlo solo falta registrar una tarjeta; no se te cobra nada.",
       body,
       accentBar: theme.accent,
     }),
     text: [
       `Reserva pendiente en ${business.name}`,
       `Día: ${formatDateLong(booking.date)} ${booking.start_time}`,
-      `Falta pagar la señal de ${formatCents(booking.deposit_cents)}: ${payUrl}`,
+      cobraSenal
+        ? `Falta pagar la señal de ${formatCents(booking.deposit_cents)}: ${payUrl}`
+        : `Falta registrar la tarjeta (no se te cobra nada ahora): ${payUrl}`,
     ].join("\n"),
   };
 }

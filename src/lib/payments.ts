@@ -23,52 +23,72 @@ export type CheckoutResult =
   | { mode: "demo" }
   | { mode: "error"; error: string };
 
+/**
+ * Abre la pantalla de Stripe. Hace una de dos cosas según cómo esté configurado
+ * el negocio, y la diferencia importa mucho para la clienta:
+ *
+ *   CON SEÑAL      Se le cobra el importe de la señal. Si además hay política
+ *                  de plantones, esa misma tarjeta queda guardada.
+ *   SIN SEÑAL      No se le cobra NADA. Solo se registra la tarjeta para poder
+ *                  cobrarle si no acude. Reservar sale gratis.
+ */
 export async function createCheckout(booking: BookingRow): Promise<CheckoutResult> {
   if (!isStripeConfigured()) return { mode: "demo" };
+
+  const cobraSenal = booking.deposit_cents > 0;
+  const guardaTarjeta = siteConfig.noShow.enabled;
+  if (!cobraSenal && !guardaTarjeta) return { mode: "demo" };
 
   try {
     const { default: Stripe } = await import("stripe");
     const stripe = new Stripe(env("STRIPE_SECRET_KEY")!);
 
     const base = baseUrl();
-    /*
-     * Con la política de plantones encendida, la misma pantalla que cobra la
-     * señal guarda la tarjeta para más adelante. Es un solo paso para la
-     * clienta en vez de dos, y evita el caso peor: reserva confirmada pero sin
-     * tarjeta guardada porque abandonó el segundo formulario.
-     */
-    const savesCard = siteConfig.noShow.enabled;
-    const session = await stripe.checkout.sessions.create({
-      mode: "payment",
+    const comun = {
       customer_email: booking.client_email,
-      ...(savesCard
-        ? {
-            customer_creation: "always" as const,
-            payment_intent_data: { setup_future_usage: "off_session" as const },
-            saved_payment_method_options: { payment_method_save: "enabled" as const },
-          }
-        : {}),
-      line_items: [
-        {
-          quantity: 1,
-          price_data: {
-            currency: siteConfig.business.currency.toLowerCase(),
-            unit_amount: booking.deposit_cents,
-            product_data: {
-              name: `Señal · ${booking.service_name}`,
-              description: `${siteConfig.business.name} · ${booking.date} a las ${booking.start_time}`,
-            },
-          },
-        },
-      ],
       // El código va en metadata para poder confirmar la reserva desde el webhook.
       metadata: { booking_code: booking.code },
       success_url: `${base}/reserva/${booking.code}?t=${booking.manage_token}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${base}/pago/${booking.code}?t=${booking.manage_token}&cancelado=1`,
       expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
-    });
+    };
 
-    if (!session.url) return { mode: "error", error: "Stripe no devolvió una URL de pago." };
+    const session = cobraSenal
+      ? await stripe.checkout.sessions.create({
+          ...comun,
+          mode: "payment",
+          ...(guardaTarjeta
+            ? {
+                customer_creation: "always" as const,
+                payment_intent_data: { setup_future_usage: "off_session" as const },
+              }
+            : {}),
+          line_items: [
+            {
+              quantity: 1,
+              price_data: {
+                currency: siteConfig.business.currency.toLowerCase(),
+                unit_amount: booking.deposit_cents,
+                product_data: {
+                  name: `Señal · ${booking.service_name}`,
+                  description: `${siteConfig.business.name} · ${booking.date} a las ${booking.start_time}`,
+                },
+              },
+            },
+          ],
+        })
+      : /*
+         * Modo "setup": Stripe pide la tarjeta y la valida con el banco, pero no
+         * mueve un euro. Es lo que permite que reservar sea gratis y aun así
+         * poder cobrar un plantón después.
+         */
+        await stripe.checkout.sessions.create({
+          ...comun,
+          mode: "setup",
+          currency: siteConfig.business.currency.toLowerCase(),
+        });
+
+    if (!session.url) return { mode: "error", error: "Stripe no devolvió una URL." };
     return { mode: "stripe", url: session.url };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -93,7 +113,16 @@ export async function verifyStripeSession(
     const session = await stripe.checkout.sessions.retrieve(sessionId);
 
     if (session.metadata?.booking_code !== bookingCode) return { paid: false };
-    if (session.payment_status !== "paid") return { paid: false };
+
+    /*
+     * Dos formas de estar "en regla" según lo que se le pidiera:
+     *   · Con señal: tiene que estar pagada.
+     *   · Sin señal (solo tarjeta): basta con que completara la pantalla; ahí
+     *     no hay pago que comprobar porque no se le cobró nada.
+     */
+    const conSenal = session.mode === "payment";
+    const correcta = conSenal ? session.payment_status === "paid" : session.status === "complete";
+    if (!correcta) return { paid: false };
 
     const card = siteConfig.noShow.enabled
       ? await cardFromSession(stripe, session)
@@ -119,25 +148,39 @@ export type SavedCard = {
 
 type StripeLike = import("stripe").Stripe;
 
-/** Saca de la sesión pagada la tarjeta que quedó guardada para futuros cobros. */
+/** Saca de la sesión la tarjeta que quedó guardada para futuros cobros. */
 async function cardFromSession(
   stripe: StripeLike,
   session: import("stripe").Stripe.Checkout.Session,
 ): Promise<SavedCard | undefined> {
   const customerId =
     typeof session.customer === "string" ? session.customer : session.customer?.id;
-  if (!customerId || !session.payment_intent) return undefined;
+  if (!customerId) return undefined;
 
-  const intentId =
-    typeof session.payment_intent === "string"
-      ? session.payment_intent
-      : session.payment_intent.id;
+  /*
+   * La tarjeta cuelga de sitios distintos según cómo se abriera la pantalla:
+   * de un cobro (payment_intent) o de un registro sin cobro (setup_intent).
+   */
+  const method = session.payment_intent
+    ? (
+        await stripe.paymentIntents.retrieve(
+          typeof session.payment_intent === "string"
+            ? session.payment_intent
+            : session.payment_intent.id,
+          { expand: ["payment_method"] },
+        )
+      ).payment_method
+    : session.setup_intent
+      ? (
+          await stripe.setupIntents.retrieve(
+            typeof session.setup_intent === "string"
+              ? session.setup_intent
+              : session.setup_intent.id,
+            { expand: ["payment_method"] },
+          )
+        ).payment_method
+      : null;
 
-  const intent = await stripe.paymentIntents.retrieve(intentId, {
-    expand: ["payment_method"],
-  });
-
-  const method = intent.payment_method;
   if (!method || typeof method === "string") return undefined;
   if (method.type !== "card" || !method.card) return undefined;
 

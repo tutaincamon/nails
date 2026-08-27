@@ -9,6 +9,8 @@ import { verifyStripeSession } from "@/lib/payments";
 import { isRealMailConfigured } from "@/lib/mail/send";
 import { formatDateLong, hoursUntil } from "@/lib/time";
 import { contactSentence } from "@/lib/business";
+import { formatCents } from "@/lib/money";
+import { esCancelacionTardia, noShowCents } from "@/lib/policy";
 
 export const dynamic = "force-dynamic";
 
@@ -49,11 +51,17 @@ export default async function BookingPage({ params, searchParams }: Props) {
     }
   }
 
-  const cancellable =
-    booking.status !== "cancelled" &&
-    hoursUntil(booking.date, booking.start_time) >= siteConfig.booking.cancellationHours;
+  const quedan = hoursUntil(booking.date, booking.start_time);
+  const isPast = quedan < 0;
 
-  const isPast = hoursUntil(booking.date, booking.start_time) < 0;
+  /*
+   * Se puede cancelar hasta el momento de la cita. Antes se cerraba la puerta a
+   * las 48 h, y lo que conseguía era que quien ya sabía que no iba a ir no
+   * avisara: el hueco se perdía igual y nadie se enteraba hasta la hora. Ahora
+   * puede avisar siempre, y ve lo que le cuesta antes de pulsar.
+   */
+  const cancellable = booking.status !== "cancelled" && !isPast;
+  const cargoPorCancelar = esCancelacionTardia(quedan) ? noShowCents(booking) : 0;
 
   return (
     <Shell
@@ -61,7 +69,7 @@ export default async function BookingPage({ params, searchParams }: Props) {
         booking.status === "cancelled"
           ? "Cita cancelada"
           : booking.status === "pending_payment"
-            ? "Falta la señal"
+            ? (booking.deposit_cents > 0 ? "Falta la señal" : "Falta registrar la tarjeta")
             : "¡Cita confirmada!"
       }
       badge={<StatusBadge status={booking.status} />}
@@ -69,13 +77,13 @@ export default async function BookingPage({ params, searchParams }: Props) {
         booking.status === "cancelled"
           ? "Esta cita ya no está en la agenda."
           : booking.status === "pending_payment"
-            ? `Te guardo el hueco del ${formatDateLong(booking.date)} a las ${booking.start_time}, pero no queda confirmado hasta que se abone la señal.`
+            ? `Te guardo el hueco del ${formatDateLong(booking.date)} a las ${booking.start_time}, pero no queda confirmado hasta que ${booking.deposit_cents > 0 ? "se abone la señal" : "registres la tarjeta"}.`
             : `Te espero el ${formatDateLong(booking.date)} a las ${booking.start_time}.`
       }
     >
       {booking.status === "pending_payment" && (
         <Link href={`/pago/${booking.code}?t=${booking.manage_token}`} className="btn-primary mb-6">
-          Pagar la señal
+          {booking.deposit_cents > 0 ? "Pagar la señal" : "Registrar mi tarjeta"}
         </Link>
       )}
 
@@ -137,43 +145,30 @@ export default async function BookingPage({ params, searchParams }: Props) {
       )}
 
       <div className="mt-6 space-y-4">
-        {booking.status !== "cancelled" && cancellable && (
-          <CancelBooking code={booking.code} token={booking.manage_token} />
-        )}
-
-        {booking.status !== "cancelled" && !cancellable && !isPast && (
-          /*
-           * Pasado el plazo, esto deja de ser un aviso informativo: es el
-           * momento en que dejar de venir cuesta dinero. Se dice con el importe
-           * delante y destacado, no en gris entre otras frases, porque es justo
-           * lo que la clienta aceptó al reservar y ya no recuerda.
-           */
-          <div
-            className={
-              siteConfig.noShow.enabled
-                ? "border border-amber-300 bg-amber-50 p-4"
-                : "text-[13.5px] leading-relaxed text-muted"
-            }
-          >
-            {siteConfig.noShow.enabled && (
-              <p className="text-[14px] font-semibold text-amber-900">
-                Ya no puedes cancelar sin coste
-              </p>
-            )}
-            <p
-              className={
-                siteConfig.noShow.enabled
-                  ? "mt-1 text-[13.5px] leading-relaxed text-amber-900"
-                  : ""
-              }
-            >
-              Quedan menos de {siteConfig.booking.cancellationHours} h para la cita.
-              {siteConfig.noShow.enabled
-                ? ` A partir de ahora, si no acudes se cobra el ${siteConfig.noShow.chargePercent} % del servicio a la tarjeta que dejaste al reservar.`
-                : ""}{" "}
-              Si no puedes venir, {contactSentence()} cuanto antes y lo solucionamos.
+        {/*
+          El aviso va ANTES del botón, no dentro de la confirmación: quien está
+          mirando su cita a dos días vista tiene que ver lo que le costaría
+          cancelar sin tener que pulsar nada para enterarse.
+        */}
+        {cancellable && cargoPorCancelar > 0 && (
+          <div className="border border-amber-300 bg-amber-50 p-4">
+            <p className="text-[14px] font-semibold text-amber-900">
+              Cancelar ahora tiene coste
+            </p>
+            <p className="mt-1 text-[13.5px] leading-relaxed text-amber-900">
+              Quedan menos de {siteConfig.booking.cancellationHours} h para la cita, así que
+              cancelar o no acudir supone un cargo de{" "}
+              <strong>{formatCents(cargoPorCancelar)}</strong> a la tarjeta que dejaste al reservar.
             </p>
           </div>
+        )}
+
+        {cancellable && (
+          <CancelBooking
+            code={booking.code}
+            token={booking.manage_token}
+            cargoCents={cargoPorCancelar}
+          />
         )}
 
         {booking.status === "cancelled" && (

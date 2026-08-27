@@ -85,6 +85,11 @@ export function BookingWizard() {
   const [form, setForm] = useState({ name: "", email: "", phone: "", address: "", notes: "" });
   /* true = los datos vienen de una reserva anterior, no los ha escrito ahora. */
   const [recordada, setRecordada] = useState(false);
+  /*
+   * Sin marcar por defecto. Si ya venía recordada de antes es que en su día
+   * dijo que sí, así que se mantiene marcada para no borrárselos sin querer.
+   */
+  const [recordarme, setRecordarme] = useState(false);
 
   /*
    * Se lee después de montar y no en el useState inicial: en el servidor no
@@ -96,6 +101,7 @@ export function BookingWizard() {
     if (!datos) return;
     setForm((actual) => ({ ...actual, ...datos }));
     setRecordada(true);
+    setRecordarme(true);
   }, []);
 
   function olvidar() {
@@ -215,16 +221,21 @@ export function BookingWizard() {
       }
 
       /*
-       * Solo se recuerda cuando la reserva ha salido bien. Guardarlo antes
-       * dejaría memorizados datos que el servidor acaba de rechazar por no ser
-       * válidos.
+       * Solo si ella lo ha pedido, y solo cuando la reserva ha salido bien.
+       *
+       * Guardar sus datos en su dispositivo sin preguntar es escribir en un
+       * aparato ajeno sin permiso, aunque sea para hacerle un favor. Y hacerlo
+       * antes de que el servidor acepte la reserva dejaría memorizados datos
+       * que se acaban de rechazar por no ser válidos.
        */
-      guardarRecuerdo({
-        name: form.name.trim(),
-        email: form.email.trim(),
-        phone: form.phone.trim(),
-        address: form.address.trim(),
-      });
+      if (recordarme) {
+        guardarRecuerdo({
+          name: form.name.trim(),
+          email: form.email.trim(),
+          phone: form.phone.trim(),
+          address: form.address.trim(),
+        });
+      }
 
       router.push(data.next!);
     } catch {
@@ -532,6 +543,24 @@ export function BookingWizard() {
                   placeholder="Llevo acrílicas de otro sitio, alergias, la idea de diseño que tengo en mente…"
                 />
               </div>
+
+              {/*
+                Guardar sus datos en su móvil es escribir en un aparato ajeno,
+                así que se pregunta. Va sin marcar: quien no responde no ha
+                dicho que sí.
+              */}
+              <label className="flex cursor-pointer items-start gap-3 text-[13.5px] leading-relaxed text-muted sm:col-span-2">
+                <input
+                  type="checkbox"
+                  checked={recordarme}
+                  onChange={(e) => setRecordarme(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--c-primary)]"
+                />
+                <span>
+                  Recordar mis datos en este dispositivo para la próxima vez. No se envían a ningún
+                  sitio: se quedan en tu navegador y puedes borrarlos cuando quieras.
+                </span>
+              </label>
             </div>
           </div>
         )}
@@ -591,9 +620,32 @@ export function BookingWizard() {
                 className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--c-primary)]"
               />
               <span>
-                He leído las condiciones: puedo cancelar sin coste hasta{" "}
-                {bookingRules.cancellationHours} h antes, y si llego con mucho retraso quizá haya que
-                simplificar el diseño o mover la cita.
+                {/*
+                  Esta casilla es lo que legitima dos cosas distintas: tratar
+                  sus datos y, si procede, cobrarle por no venir. Tiene que
+                  nombrar y enlazar las dos, y quedar sin marcar por defecto:
+                  un consentimiento premarcado no es consentimiento.
+                */}
+                He leído y acepto la{" "}
+                <a
+                  href="/privacidad"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-primary underline underline-offset-2"
+                >
+                  política de privacidad
+                </a>{" "}
+                y las{" "}
+                <a
+                  href="/condiciones"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-primary underline underline-offset-2"
+                >
+                  condiciones de reserva
+                </a>
+                : puedo cancelar sin coste hasta {bookingRules.cancellationHours} h antes, y si
+                llego con mucho retraso quizá haya que simplificar el diseño o mover la cita.
                 {/*
                   Con la política de plantones encendida esto deja de ser un
                   formalismo: es lo que autoriza el cobro, así que se dice
@@ -604,19 +656,6 @@ export function BookingWizard() {
                     {siteConfig.noShow.terms}
                   </strong>
                 )}
-                {/*
-                  El enlace va aquí y no solo en el pie: es la casilla que
-                  autoriza el cobro, así que las condiciones tienen que estar a
-                  un clic de ella, no escondidas al final de la página.
-                */}
-                <a
-                  href="/condiciones"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-2 inline-block text-[12.5px] text-primary underline underline-offset-2"
-                >
-                  Leer las condiciones completas
-                </a>
               </span>
             </label>
           </div>

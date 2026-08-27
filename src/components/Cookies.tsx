@@ -62,7 +62,7 @@ export function Cookies() {
             <p className="text-[13.5px] leading-relaxed text-muted">
               Uso medición anónima de visitas para saber si la web funciona bien. Puedes rechazarla
               y todo lo demás seguirá igual.{" "}
-              <Link href="/privacidad" className="font-semibold text-primary hover:underline">
+              <Link href="/cookies" className="font-semibold text-primary hover:underline">
                 Más información
               </Link>
               .

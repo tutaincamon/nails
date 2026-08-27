@@ -106,6 +106,9 @@ export async function Footer() {
           <Link href="/condiciones" className="hover:text-ink hover:underline">
             Condiciones
           </Link>
+          <Link href="/cookies" className="hover:text-ink hover:underline">
+            Cookies
+          </Link>
           <Link href="/admin" className="hover:text-ink hover:underline">
             Acceso profesional
           </Link>

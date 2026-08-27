@@ -7,12 +7,12 @@ import { useEffect, useState } from "react";
 import siteConfig from "@config";
 
 /*
- * `movil` marca los tres que caben en un teléfono sin agobiar. En pantalla
- * pequeña salían cero: solo el logotipo y el botón de reservar, así que las
- * fotos, las opiniones y sus propias citas quedaban enterradas para quien
- * entra desde el móvil, que es casi todo el mundo.
+ * `movil` marca los dos únicos que caben junto al botón de reservar sin que la
+ * barra se descuadre. En un teléfono no salía ninguno, así que las fotos y sus
+ * propias citas quedaban enterradas justo para quien entra desde el móvil.
  *
- * Son tres a propósito. Con seis no se leería ninguno.
+ * Dos y no más: en 375 px el logotipo y el botón ya se comen media barra. A lo
+ * demás se llega bajando por la página.
  */
 const links = [
   { href: "/#servicios", label: "Servicios", movil: false },
@@ -21,7 +21,7 @@ const links = [
   { href: "/#estudio", label: siteConfig.venue.sectionTitle, movil: false },
   // La sección de opiniones solo existe si hay reseñas, así que el enlace también.
   ...(siteConfig.content.testimonials.length > 0
-    ? [{ href: "/#opiniones", label: "Opiniones", movil: true }]
+    ? [{ href: "/#opiniones", label: "Opiniones", movil: false }]
     : []),
   { href: "/#dudas", label: "Dudas", movil: false },
   { href: "/mis-citas", label: "Mis citas", movil: true },
@@ -106,41 +106,38 @@ export function Nav() {
             ))}
           </div>
 
-          <Link
-            href="/reservar"
-            className={`btn-sm ${overlay ? "btn-primary btn-light" : "btn-primary"}`}
-          >
-            Reservar
-          </Link>
-        </nav>
+          {/*
+            En móvil estos dos van pegados al botón de reservar, en la misma
+            línea, para que la barra siga siendo una sola fila. En escritorio
+            no aparecen aquí: ya están en el grupo del centro.
+          */}
+          <div className="flex items-center gap-4 sm:gap-5">
+            <div className="flex items-center gap-4 md:hidden">
+              {enMovil.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`whitespace-nowrap text-[10.5px] font-semibold uppercase tracking-[0.1em] transition-opacity hover:opacity-60 ${
+                    overlay ? "text-white" : "text-ink"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
 
-        {/*
-          Segunda fila, solo en móvil. Va debajo y no dentro de la primera
-          porque en 375 px el logotipo y el botón de reservar ya ocupan la
-          anchura entera: metidos ahí, estos tres saldrían apelotonados.
-        */}
-        <nav
-          className={`section flex items-center gap-6 pb-2.5 md:hidden ${
-            overlay ? "" : "border-t border-line/60 pt-2.5"
-          }`}
-        >
-          {enMovil.map((link) => (
             <Link
-              key={link.href}
-              href={link.href}
-              className={`text-[11px] font-semibold uppercase tracking-[0.14em] transition-opacity hover:opacity-60 ${
-                overlay ? "text-white/90" : "text-muted"
-              }`}
+              href="/reservar"
+              className={`btn-sm whitespace-nowrap ${overlay ? "btn-primary btn-light" : "btn-primary"}`}
             >
-              {link.label}
+              Reservar
             </Link>
-          ))}
+          </div>
         </nav>
       </header>
 
-      {/* Fuera de la portada, la barra fija taparía el contenido. En móvil son
-          dos filas, así que el hueco tiene que ser más alto. */}
-      {!isHome && <div className="h-[112px] md:h-[72px]" aria-hidden="true" />}
+      {/* Fuera de la portada, la barra fija taparía el contenido. */}
+      {!isHome && <div className="h-[72px]" aria-hidden="true" />}
     </>
   );
 }

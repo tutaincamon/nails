@@ -28,7 +28,8 @@ export type MailKind =
   | "client_reminder"
   | "cancellation_client"
   | "cancellation_owner"
-  | "pending_payment";
+  | "pending_payment"
+  | "client_portal";
 
 export type Mail = {
   to: string;

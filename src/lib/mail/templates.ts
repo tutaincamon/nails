@@ -119,6 +119,26 @@ function button(href: string, label: string): string {
   </table>`;
 }
 
+/*
+ * El recuadro de "dónde es", que cambia de sentido según quién se desplace.
+ * En un estudio se le dice a la clienta a dónde ir; a domicilio se le devuelve
+ * su propia dirección, porque acaba de dárnosla y lo útil es que compruebe que
+ * no se equivocó al teclearla.
+ */
+function wherePanel(booking: BookingRow): string {
+  if (!siteConfig.venue.needsClientAddress) {
+    return calloutBox(
+      `<strong>Dónde es:</strong> ${escapeHtml(business.address.area)}.<br>${escapeHtml(business.address.note)}`,
+    );
+  }
+  const direccion = booking.client_address
+    ? escapeHtml(booking.client_address).replace(/\n/g, "<br>")
+    : "—";
+  return calloutBox(
+    `<strong>Voy a:</strong><br>${direccion}<br><span style="color:${theme.muted};">Si algo no está bien, dímelo y lo corrijo.</span>`,
+  );
+}
+
 function calloutBox(text: string): string {
   return `<div style="margin:20px 0 0;padding:14px 16px;background:${theme.bg};border-left:3px solid ${theme.accent};border-radius:6px;font-size:14px;line-height:1.6;color:${theme.ink};">${text}</div>`;
 }
@@ -137,7 +157,7 @@ export function clientConfirmation(booking: BookingRow, manageUrl: string) {
   const body = `
     ${detailsTable(booking)}
     ${depositLine ? calloutBox(depositLine) : ""}
-    ${calloutBox(`<strong>Dónde es:</strong> ${escapeHtml(business.address.area)}.<br>${escapeHtml(business.address.note)}`)}
+    ${wherePanel(booking)}
     ${button(manageUrl, "Ver o cancelar mi cita")}
     <p style="margin:16px 0 0;font-size:13px;line-height:1.6;color:${theme.muted};">
       Puedes cancelar sin coste hasta ${siteConfig.booking.cancellationHours} h antes desde ese enlace.
@@ -239,7 +259,7 @@ export function ownerNotification(booking: BookingRow, adminUrl: string) {
 export function clientReminder(booking: BookingRow, manageUrl: string) {
   const body = `
     ${detailsTable(booking)}
-    ${calloutBox(`<strong>Dónde es:</strong> ${escapeHtml(business.address.area)}.<br>${escapeHtml(business.address.note)}`)}
+    ${wherePanel(booking)}
     <p style="margin:20px 0 0;font-size:14px;line-height:1.7;color:${theme.ink};">
       <strong>Recuerda:</strong><br>
       ${siteConfig.content.policies.map((p) => `· ${escapeHtml(p)}`).join("<br>")}
@@ -336,6 +356,39 @@ export function pendingPaymentNotice(booking: BookingRow, payUrl: string) {
       `Reserva pendiente en ${business.name}`,
       `Día: ${formatDateLong(booking.date)} ${booking.start_time}`,
       `Falta pagar la señal de ${formatCents(booking.deposit_cents)}: ${payUrl}`,
+    ].join("\n"),
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/*  6. Enlace a "Mis citas"                                                   */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * No lleva ningún dato de las citas: solo el enlace. Así, si el correo acaba
+ * en una bandeja compartida o se reenvía sin querer, no se ha filtrado nada
+ * por el camino, y el enlace además caduca a las 72 h.
+ */
+export function clientPortalLink(url: string) {
+  const body = `
+    ${calloutBox("El enlace vale durante 72 horas. Pasado ese rato, pídelo otra vez desde la web.")}
+    ${button(url, "Ver mis citas")}`;
+
+  return {
+    subject: `Tus citas en ${business.name}`,
+    html: shell({
+      preheader: "Tu enlace para ver y gestionar tus citas.",
+      heading: "Aquí tienes tus citas",
+      intro:
+        "Desde este enlace puedes ver tu próxima cita, las anteriores, y cancelar si lo necesitas.",
+      body,
+      accentBar: theme.accent,
+    }),
+    text: [
+      `Tus citas en ${business.name}`,
+      ``,
+      `Entra aquí para verlas y gestionarlas: ${url}`,
+      `El enlace caduca en 72 horas.`,
     ].join("\n"),
   };
 }

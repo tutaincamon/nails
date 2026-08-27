@@ -602,6 +602,21 @@ export async function allBookings(limit = 200): Promise<BookingRow[]> {
   ])) as BookingRow[];
 }
 
+/**
+ * Todas las citas de una clienta, de la más próxima a la más antigua.
+ *
+ * El email se compara en minúsculas porque se guarda así al reservar, pero la
+ * clienta puede escribirlo de otra forma al pedir su listado.
+ */
+export async function bookingsForEmail(email: string, limit = 50): Promise<BookingRow[]> {
+  const db = await driver();
+  return (await db.all(
+    `SELECT * FROM bookings WHERE lower(client_email) = ?
+     ORDER BY date DESC, start_time DESC LIMIT ?`,
+    [email.trim().toLowerCase(), limit],
+  )) as BookingRow[];
+}
+
 /** Todas las reservas desde una fecha, en cualquier estado. Para estadísticas. */
 export async function bookingsFrom(date: string): Promise<BookingRow[]> {
   const db = await driver();

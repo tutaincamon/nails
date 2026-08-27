@@ -24,3 +24,8 @@ export function payUrl(code: string, token: string): string {
 export function adminUrl(): string {
   return `${baseUrl()}/admin`;
 }
+
+/** Enlace al listado de citas de una clienta. */
+export function portalUrl(testigo: string): string {
+  return `${baseUrl()}/mis-citas/${testigo}`;
+}

@@ -16,6 +16,7 @@ const links = [
     ? [{ href: "/#opiniones", label: "Opiniones" }]
     : []),
   { href: "/#dudas", label: "Dudas" },
+  { href: "/mis-citas", label: "Mis citas" },
 ];
 
 /*

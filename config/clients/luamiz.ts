@@ -148,6 +148,12 @@ export const luamiz = {
   booking: {
     ...appflu.booking,
     /*
+     * Cada cuarto de hora en vez de cada media. Su servicio más corto son 20
+     * min: con una rejilla de 30 se perdía tiempo en cada hueco y se le
+     * ofrecían la mitad de horas de las que puede atender.
+     */
+    slotMinutes: 15,
+    /*
      * Aquí esto NO son minutos de limpieza: es el tiempo de ir de una casa a
      * otra. 45 min es lo que se tarda en recoger, moverse por una ciudad media
      * y montar otra vez. Si se queda corto, la agenda le dará citas a las que

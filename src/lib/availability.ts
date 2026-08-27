@@ -166,7 +166,26 @@ export async function availabilityRange(
       const rangeStart = toMinutes(range.start);
       const rangeEnd = toMinutes(range.end);
 
-      for (let start = rangeStart; start + durationMin <= rangeEnd; start += slotMinutes) {
+      /*
+       * Horas candidatas: la rejilla de siempre MÁS el minuto exacto en que
+       * queda libre después de cada cita.
+       *
+       * Solo con la rejilla se perdía tiempo tonto. Con servicios de 20 min y
+       * 45 de desplazamiento, tras una cita a las 10:00 queda libre a las
+       * 11:05, pero la rejilla de 30 no ofrecía nada hasta las 11:30: media
+       * hora muerta que nadie podía reservar. Añadiendo ese 11:05 el día se
+       * compacta sin llenar la pantalla de horas.
+       *
+       * Se redondea al múltiplo de 5 siguiente para no ofrecer las 11:03.
+       */
+      const candidatos = new Set<number>();
+      for (let s = rangeStart; s + durationMin <= rangeEnd; s += slotMinutes) candidatos.add(s);
+      for (const ocupado of occupied) {
+        const libre = Math.ceil(ocupado.end / 5) * 5;
+        if (libre >= rangeStart && libre + durationMin <= rangeEnd) candidatos.add(libre);
+      }
+
+      for (const start of [...candidatos].sort((a, b) => a - b)) {
         if (start < earliestMinute) continue;
 
         const candidate: Interval = { start, end: start + durationMin + bufferMinutes };

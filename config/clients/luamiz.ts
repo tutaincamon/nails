@@ -1,7 +1,7 @@
 import { appflu } from "./appflu";
 
 /* ============================================================================
- *  LUAMIZ  —  Indira · manicura y pedicura a domicilio en Las Palmas
+ *  LUAMIZ  —  Indira · manicura y pedicura a domicilio, desde Agüimes
  * ============================================================================
  *
  *  Parte de la configuración de Appflu y solo cambia lo suyo, igual que isis.ts,
@@ -37,7 +37,7 @@ export const luamiz = {
     /* Suyas, de su cartelera de servicios. */
     tagline: "Tu cita de belleza, donde tú quieras",
     intro:
-      "Manicura, pedicura y acrílico a domicilio en Las Palmas. Voy yo a tu casa con todo el material: no pierdes el viaje ni la sala de espera, solo eliges la hora.",
+      "Manicura, pedicura y acrílico a domicilio. Salgo de Agüimes y me muevo por toda la isla: voy yo a tu casa con todo el material, así que no pierdes el viaje ni la sala de espera.",
     ownerName: "Indira",
     /* Aquí llegan los avisos de cada reserva. OWNER_EMAIL manda sobre esto. */
     ownerEmail: "luamiz.nails@gmail.com",
@@ -50,13 +50,13 @@ export const luamiz = {
     logo: "/luamiz/logo.png",
     logoAlt: "Luamiz · manicura y pedicura a domicilio",
     address: {
-      area: "Las Palmas de Gran Canaria",
       /*
-       * Coherente con venue.needsClientAddress = true. Si resulta que atiende
-       * en su propio centro (ver AVISOS), esta frase y el bloque venue cambian
-       * juntos: son la misma decisión.
+       * Sale de Agüimes, que es donde vive, pero se desplaza por toda la isla.
+       * Decirlo así evita las dos confusiones: que alguien de la capital piense
+       * que no llega, y que alguien del sur crea que solo trabaja allí.
        */
-      note: "Voy yo a tu casa, en Las Palmas y alrededores. Dime la dirección al reservar.",
+      area: "Agüimes · a domicilio en toda la isla",
+      note: "Voy yo a tu casa. Salgo de Agüimes y me muevo por toda Gran Canaria, así que dime la dirección al reservar y te confirmo la hora.",
     },
   },
 
@@ -166,9 +166,13 @@ export const luamiz = {
     slotMinutes: 15,
     /*
      * Aquí esto NO son minutos de limpieza: es el tiempo de ir de una casa a
-     * otra. 30 min, fijado por ella. Es el número que decide si la agenda le da
-     * citas a las que puede llegar: si en la práctica se queda corto porque le
-     * salen clientas lejos, hay que subirlo.
+     * otra. 30 min, fijado por ella.
+     *
+     * OJO: sale de Agüimes pero atiende toda la isla, y de Agüimes a la capital
+     * o al suroeste hay bastante más de media hora. Este número vale para su
+     * zona; para una cita lejos tiene que reservarse el rato ella misma desde
+     * /admin → Bloquear horas, o la agenda le dará una cita detrás a la que no
+     * llega.
      */
     bufferMinutes: 30,
     /* Necesita el día antes para organizar la ruta, no bastan 12 h. */
@@ -487,7 +491,7 @@ export const luamiz = {
       },
       {
         q: "¿Hasta dónde te desplazas?",
-        a: "Escríbeme antes de reservar si vives algo apartada y lo miramos. Entre cita y cita reservo tiempo de desplazamiento, así que cuanto antes sepa la dirección, mejor cuadro la ruta.",
+        a: "Salgo de Agüimes y me muevo por toda Gran Canaria. Entre cita y cita reservo tiempo de desplazamiento, así que si vives lejos escríbeme antes de reservar y cuadramos la hora: es la forma de que llegue puntual.",
       },
       {
         q: "¿Tengo que pagar algo al reservar?",

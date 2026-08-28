@@ -202,6 +202,8 @@ export async function notifyConfirmed(booking: BookingRow) {
       to: ownerEmail(),
       kind: "owner_notification",
       bookingCode: booking.code,
+      // Que al responder le escriba a la clienta, no a sí misma.
+      replyTo: booking.client_email,
       ...forOwner,
     },
   ];
@@ -290,6 +292,7 @@ export async function cancelBooking(code: string, token: string) {
       to: ownerEmail(),
       kind: "cancellation_owner",
       bookingCode: code,
+      replyTo: cancelled.client_email,
       ...cancellationNotice(cancelled, true, tarde),
     },
   ]);

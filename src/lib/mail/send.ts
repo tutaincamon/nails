@@ -40,6 +40,13 @@ export type Mail = {
   text: string;
   kind: MailKind;
   bookingCode?: string | null;
+  /*
+   * A dónde va la respuesta si alguien le da a Responder. Por defecto, a la
+   * profesional: es lo que quiere una clienta que contesta a su confirmación.
+   * El aviso de reserva nueva lo cambia por el correo de la clienta, para que
+   * ella pueda escribirle sin buscarlo.
+   */
+  replyTo?: string;
 };
 
 export type Transport = "smtp" | "resend" | "simulado";
@@ -134,7 +141,7 @@ async function sendWithSmtp(mail: Mail): Promise<SendResult> {
     await transporter.sendMail({
       from: fromAddress(),
       to: mail.to,
-      replyTo: ownerEmail(),
+      replyTo: mail.replyTo ?? ownerEmail(),
       subject: mail.subject,
       html: mail.html,
       text: mail.text,
@@ -160,7 +167,7 @@ async function sendWithResend(mail: Mail): Promise<SendResult> {
     const { error } = await resend.emails.send({
       from: env("MAIL_FROM")!,
       to: mail.to,
-      replyTo: ownerEmail(),
+      replyTo: mail.replyTo ?? ownerEmail(),
       subject: mail.subject,
       html: mail.html,
       text: mail.text,

@@ -30,7 +30,8 @@ export type MailKind =
   | "cancellation_owner"
   | "pending_payment"
   | "client_portal"
-  | "verification_code";
+  | "verification_code"
+  | "booking_moved";
 
 export type Mail = {
   to: string;

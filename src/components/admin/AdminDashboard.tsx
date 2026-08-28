@@ -248,6 +248,7 @@ function BookingCard({ booking }: { booking: BookingRow }) {
   const router = useRouter();
   const [working, setWorking] = useState(false);
   const [noShowError, setNoShowError] = useState<string | null>(null);
+  const [editando, setEditando] = useState(false);
   const addOns = parseAddOns(booking.addons_json);
 
   async function setStatus(status: BookingStatus) {
@@ -386,7 +387,28 @@ function BookingCard({ booking }: { booking: BookingRow }) {
 
       {noShowError && <p className="mt-2 text-[12.5px] text-red-700">{noShowError}</p>}
 
+      {editando && (
+        <EditarCita
+          booking={booking}
+          onCerrar={() => setEditando(false)}
+          onGuardado={() => {
+            setEditando(false);
+            router.refresh();
+          }}
+        />
+      )}
+
       <div className="mt-3 flex flex-wrap gap-2">
+        {!editando && booking.status !== "cancelled" && (
+          <button
+            type="button"
+            className="btn-ghost btn-sm"
+            disabled={working}
+            onClick={() => setEditando(true)}
+          >
+            Editar
+          </button>
+        )}
         {booking.status !== "completed" && (
           <button
             type="button"
@@ -440,6 +462,168 @@ function BookingCard({ booking }: { booking: BookingRow }) {
 }
 
 /* -------------------------------------------------------------------------- */
+/*  Editar una cita                                                           */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Mover una cita de hora o corregir los datos de la clienta.
+ *
+ * El servicio no se edita: cambiarlo altera la duración y con ella los huecos
+ * del resto del día, así que eso es cancelar y volver a reservar. Aquí se
+ * arregla lo que de verdad se estropea a menudo: una dirección mal escrita y
+ * un cambio de hora acordado por WhatsApp.
+ */
+function EditarCita({
+  booking,
+  onCerrar,
+  onGuardado,
+}: {
+  booking: BookingRow;
+  onCerrar: () => void;
+  onGuardado: () => void;
+}) {
+  const [form, setForm] = useState({
+    date: booking.date,
+    time: booking.start_time,
+    name: booking.client_name,
+    phone: booking.client_phone,
+    address: booking.client_address,
+    notes: booking.notes,
+  });
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const semueve = form.date !== booking.date || form.time !== booking.start_time;
+
+  async function guardar() {
+    setGuardando(true);
+    setError(null);
+    const r = await fetch(`/api/admin/bookings/${encodeURIComponent(booking.code)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+    const d = (await r.json()) as { ok: boolean; error?: string };
+    setGuardando(false);
+    if (!d.ok) {
+      setError(d.error ?? "No se pudo guardar.");
+      return;
+    }
+    onGuardado();
+  }
+
+  return (
+    <div className="mt-3 border border-primary/40 bg-bg p-4">
+      <p className="text-[14px] font-semibold text-ink">Editar la cita</p>
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <div>
+          <label className="label" htmlFor={`d-${booking.code}`}>
+            Día
+          </label>
+          <input
+            id={`d-${booking.code}`}
+            type="date"
+            className="field py-1.5"
+            value={form.date}
+            onChange={(e) => setForm({ ...form, date: e.target.value })}
+          />
+        </div>
+        <div>
+          <label className="label" htmlFor={`h-${booking.code}`}>
+            Hora
+          </label>
+          <input
+            id={`h-${booking.code}`}
+            type="time"
+            className="field py-1.5"
+            value={form.time}
+            onChange={(e) => setForm({ ...form, time: e.target.value })}
+          />
+        </div>
+        <div>
+          <label className="label" htmlFor={`n-${booking.code}`}>
+            Nombre
+          </label>
+          <input
+            id={`n-${booking.code}`}
+            className="field py-1.5"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+          />
+        </div>
+        <div>
+          <label className="label" htmlFor={`t-${booking.code}`}>
+            Teléfono
+          </label>
+          <input
+            id={`t-${booking.code}`}
+            className="field py-1.5"
+            value={form.phone}
+            onChange={(e) => setForm({ ...form, phone: e.target.value })}
+          />
+        </div>
+        {siteConfig.venue.needsClientAddress && (
+          <div className="sm:col-span-2">
+            <label className="label" htmlFor={`a-${booking.code}`}>
+              Dirección
+            </label>
+            <textarea
+              id={`a-${booking.code}`}
+              rows={2}
+              className="field resize-y py-1.5"
+              value={form.address}
+              onChange={(e) => setForm({ ...form, address: e.target.value })}
+            />
+          </div>
+        )}
+        <div className="sm:col-span-2">
+          <label className="label" htmlFor={`o-${booking.code}`}>
+            Nota
+          </label>
+          <textarea
+            id={`o-${booking.code}`}
+            rows={2}
+            className="field resize-y py-1.5"
+            value={form.notes}
+            onChange={(e) => setForm({ ...form, notes: e.target.value })}
+          />
+        </div>
+      </div>
+
+      {/*
+        El email no se edita: es lo que identifica a la clienta y con lo que
+        entra a ver sus citas. Cambiarlo desde aquí sería reasignarle la cita a
+        otra persona sin que ninguna de las dos se entere.
+      */}
+      <p className="mt-3 text-[12.5px] text-muted">
+        Email: {booking.client_email} · Servicio: {booking.service_name} (
+        {formatDuration(booking.duration_min)}). Para cambiar el servicio hay que cancelar y
+        reservar de nuevo, porque cambia la duración.
+      </p>
+
+      {semueve && (
+        <p className="mt-2 border border-amber-300 bg-amber-50 px-3 py-2 text-[12.5px] leading-relaxed text-amber-900">
+          Estás moviendo la cita. Al guardar se le envía un email a la clienta con el día y la hora
+          nuevos.
+        </p>
+      )}
+
+      {error && <p className="mt-2 text-[12.5px] text-red-700">{error}</p>}
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button type="button" className="btn-primary btn-sm" disabled={guardando} onClick={guardar}>
+          {guardando ? "Guardando…" : semueve ? "Guardar y avisar" : "Guardar"}
+        </button>
+        <button type="button" className="btn-ghost btn-sm" disabled={guardando} onClick={onCerrar}>
+          Cancelar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
 /*  Mi horario                                                                */
 /* -------------------------------------------------------------------------- */
 
@@ -473,7 +657,6 @@ function ScheduleTab({ hours, isCustom }: { hours: WeeklyHours; isCustom: boolea
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [working, setWorking] = useState(false);
-  const [noShowError, setNoShowError] = useState<string | null>(null);
 
   function update(day: number, ranges: { start: string; end: string }[]) {
     setDraft({ ...draft, [day]: ranges });
@@ -652,7 +835,6 @@ function BlocksTab({ blocks, today }: { blocks: BlockRow[]; today: string }) {
   });
   const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
-  const [noShowError, setNoShowError] = useState<string | null>(null);
 
   async function add(event: React.FormEvent) {
     event.preventDefault();

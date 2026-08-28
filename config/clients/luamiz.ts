@@ -39,12 +39,11 @@ export const luamiz = {
     intro:
       "Manicura, pedicura y acrílico a domicilio en Las Palmas. Voy yo a tu casa con todo el material: no pierdes el viaje ni la sala de espera, solo eliges la hora.",
     ownerName: "Indira",
-    /*
-     * PROVISIONAL: el correo de Alejandro mientras Indira no pase el suyo. Aquí
-     * llegan los avisos de cada reserva nueva, así que en cuanto lo dé hay que
-     * cambiarlo — o ponerlo en OWNER_EMAIL, que manda sobre esto.
-     */
-    ownerEmail: "alexfoxrodillanegrin@gmail.com",
+    /* Aquí llegan los avisos de cada reserva. OWNER_EMAIL manda sobre esto. */
+    ownerEmail: "luamiz.nails@gmail.com",
+    phone: "633 74 55 08",
+    /* Solo dígitos con prefijo, que es lo que espera el enlace de WhatsApp. */
+    whatsapp: "34633745508",
     instagram: "beautynailsindiradiazz",
     tiktok: "",
     /* El suyo, en alta resolución, recortado en círculo con fondo transparente. */
@@ -59,6 +58,18 @@ export const luamiz = {
        */
       note: "Voy yo a tu casa, en Las Palmas y alrededores. Dime la dirección al reservar.",
     },
+  },
+
+  /*
+   * Sus datos fiscales, que rellenan el aviso legal, la política de privacidad
+   * y las condiciones. Son públicos por obligación: el artículo 10 de la LSSI
+   * pide identificar a quien está detrás de una web con actividad económica.
+   */
+  legal: {
+    ownerLegalName: "Indira Díaz Ramos",
+    taxId: "46252060A",
+    address: "Calle Artemi Semidán, Agüimes (Las Palmas)",
+    contactEmail: "luamiz.nails@gmail.com",
   },
 
   /*
@@ -155,11 +166,11 @@ export const luamiz = {
     slotMinutes: 15,
     /*
      * Aquí esto NO son minutos de limpieza: es el tiempo de ir de una casa a
-     * otra. 45 min es lo que se tarda en recoger, moverse por una ciudad media
-     * y montar otra vez. Si se queda corto, la agenda le dará citas a las que
-     * no puede llegar. Ajustar en cuanto se sepa su zona real.
+     * otra. 30 min, fijado por ella. Es el número que decide si la agenda le da
+     * citas a las que puede llegar: si en la práctica se queda corto porque le
+     * salen clientas lejos, hay que subirlo.
      */
-    bufferMinutes: 45,
+    bufferMinutes: 30,
     /* Necesita el día antes para organizar la ruta, no bastan 12 h. */
     minNoticeHours: 24,
     /* 48 h, igual que noShow.hoursBefore. Si se cambia uno hay que cambiar el

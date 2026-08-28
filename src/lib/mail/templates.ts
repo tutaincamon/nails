@@ -468,3 +468,45 @@ export function verificationCode(codigo: string) {
     ].join("\n"),
   };
 }
+
+/* -------------------------------------------------------------------------- */
+/*  8. La cita ha cambiado de hora                                            */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * Cuando es la profesional quien mueve una cita, la clienta tiene que
+ * enterarse sí o sí: se ha organizado el día alrededor de esa hora. Por eso
+ * lleva delante la fecha vieja y la nueva, no solo la nueva.
+ */
+export function bookingMoved(booking: BookingRow, antes: { date: string; start_time: string }, manageUrl: string) {
+  const body = `
+    ${calloutBox(
+      `<strong>Antes:</strong> ${escapeHtml(formatDateLong(antes.date))} a las ${escapeHtml(antes.start_time)}<br>` +
+        `<strong>Ahora:</strong> ${escapeHtml(formatDateLong(booking.date))} a las ${escapeHtml(booking.start_time)}`,
+    )}
+    ${detailsTable(booking)}
+    ${wherePanel(booking)}
+    ${button(manageUrl, "Ver mi cita")}
+    <p style="margin:16px 0 0;font-size:13px;line-height:1.6;color:${theme.muted};">
+      Si esa hora no te viene bien, ${escapeHtml(contactSentence())} y buscamos otra.
+    </p>`;
+
+  return {
+    subject: `Tu cita cambia al ${formatDateLong(booking.date)} a las ${booking.start_time}`,
+    html: shell({
+      preheader: `Tu cita se mueve al ${formatDateLong(booking.date)} a las ${booking.start_time}.`,
+      heading: "He movido tu cita",
+      intro: "He tenido que cambiarte la hora. Aquí tienes el nuevo día, y perdona las molestias.",
+      body,
+      accentBar: theme.accent,
+    }),
+    text: [
+      `Tu cita en ${business.name} ha cambiado de hora`,
+      ``,
+      `Antes: ${formatDateLong(antes.date)} a las ${antes.start_time}`,
+      `Ahora: ${formatDateLong(booking.date)} a las ${booking.start_time}`,
+      ``,
+      `Ver la cita: ${manageUrl}`,
+    ].join("\n"),
+  };
+}

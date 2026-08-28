@@ -112,6 +112,12 @@ export async function availabilityRange(
   fromDate: string,
   days: number,
   durationMin: number,
+  /*
+   * Código de una cita que NO cuenta como ocupada. Hace falta al mover una cita
+   * desde el panel: sin esto chocaría consigo misma y no se podría ni
+   * adelantarla media hora.
+   */
+  ignorar?: string,
 ): Promise<DayAvailability[]> {
   const { slotMinutes, bufferMinutes, minNoticeHours, maxDaysAhead, maxPerDay } =
     siteConfig.booking;
@@ -119,7 +125,7 @@ export async function availabilityRange(
   const now = nowInBusinessTz();
   const lastDate = addDays(fromDate, Math.max(0, days - 1));
   // El horario se lee una sola vez para todo el rango, no una por día.
-  const [bookings, blocks, hours, dias] = await Promise.all([
+  const [todas, blocks, hours, dias] = await Promise.all([
     bookingsBetween(fromDate, lastDate),
     blocksBetween(fromDate, lastDate),
     effectiveHours(),
@@ -127,6 +133,8 @@ export async function availabilityRange(
     // dejar la agenda entera cerrada.
     getDayHours(fromDate, lastDate).catch(() => ({}) as DiasSueltos),
   ]);
+
+  const bookings = ignorar ? todas.filter((b) => b.code !== ignorar) : todas;
 
   const result: DayAvailability[] = [];
 
@@ -206,8 +214,9 @@ export async function availabilityRange(
 export async function availabilityForDate(
   date: string,
   durationMin: number,
+  ignorar?: string,
 ): Promise<DayAvailability> {
-  return (await availabilityRange(date, 1, durationMin))[0];
+  return (await availabilityRange(date, 1, durationMin, ignorar))[0];
 }
 
 /**
@@ -218,8 +227,9 @@ export async function isSlotBookable(
   date: string,
   start: string,
   durationMin: number,
+  ignorar?: string,
 ): Promise<{ ok: true } | { ok: false; reason: string }> {
-  const day = await availabilityForDate(date, durationMin);
+  const day = await availabilityForDate(date, durationMin, ignorar);
 
   if (day.closed && day.slots.length === 0) {
     return { ok: false, reason: day.closedReason ?? "Ese día no hay huecos disponibles." };

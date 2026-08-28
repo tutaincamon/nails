@@ -438,6 +438,45 @@ export async function insertBooking(
   );
 }
 
+/**
+ * Cambios que la profesional hace desde el panel: mover la cita de hora o
+ * corregir los datos de la clienta.
+ *
+ * El servicio y el precio NO se tocan aquí a propósito. Cambiarlos altera la
+ * duración y con ella los huecos del resto del día, así que eso es cancelar y
+ * volver a reservar, no editar.
+ */
+export async function updateBookingDetails(
+  code: string,
+  cambios: {
+    date: string;
+    start_time: string;
+    end_time: string;
+    client_name: string;
+    client_phone: string;
+    client_address: string;
+    notes: string;
+  },
+): Promise<void> {
+  const db = await driver();
+  await db.run(
+    `UPDATE bookings SET
+       date = ?, start_time = ?, end_time = ?,
+       client_name = ?, client_phone = ?, client_address = ?, notes = ?
+     WHERE code = ?`,
+    [
+      cambios.date,
+      cambios.start_time,
+      cambios.end_time,
+      cambios.client_name,
+      cambios.client_phone,
+      cambios.client_address,
+      cambios.notes,
+      code,
+    ],
+  );
+}
+
 export async function updateBookingStatus(code: string, status: BookingStatus): Promise<void> {
   const db = await driver();
   const cancelledAt = status === "cancelled" ? new Date().toISOString() : null;

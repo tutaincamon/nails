@@ -1,5 +1,6 @@
 import siteConfig from "@config";
 import { bookingsFrom, type BookingRow } from "@/lib/db";
+import { cobradoCents, precioSinConfirmar } from "@/lib/price";
 import { nowInBusinessTz } from "@/lib/time";
 
 /*
@@ -15,9 +16,12 @@ import { nowInBusinessTz } from "@/lib/time";
  *      futuras ya reservadas). Meterlo todo en el mismo saco daría una foto
  *      demasiado optimista de lo que se lleva ganado.
  *
- * Los servicios con precio "desde" se guardan por su precio mínimo, así que los
- * ingresos son un suelo, nunca una cifra inflada. Cuando hay alguna cita de ese
- * tipo, la interfaz lo advierte.
+ *   3. Cuenta el precio realmente cobrado, no el de la reserva: si al terminar
+ *      se ajustó el importe, es ese el que suma. Ver src/lib/price.ts.
+ *
+ * Los servicios con precio "desde" se guardan por su precio mínimo, así que
+ * mientras no se confirme el precio final los ingresos son un suelo, nunca una
+ * cifra inflada. Cuando queda alguna cita así, la interfaz lo advierte.
  */
 
 const LOCALE = siteConfig.business.locale;
@@ -129,7 +133,7 @@ export async function buildStats(): Promise<Stats> {
     return {
       key,
       label: monthLabel(key),
-      revenueCents: inMonth.reduce((sum, b) => sum + b.price_cents, 0),
+      revenueCents: inMonth.reduce((sum, b) => sum + cobradoCents(b), 0),
       bookings: inMonth.length,
       cancelled,
       newClients,
@@ -143,10 +147,10 @@ export async function buildStats(): Promise<Stats> {
   const monthBookings = active.filter((b) => monthKey(b.date) === currentKey);
   const billedCents = monthBookings
     .filter((b) => b.date <= today)
-    .reduce((sum, b) => sum + b.price_cents, 0);
+    .reduce((sum, b) => sum + cobradoCents(b), 0);
   const upcomingCents = monthBookings
     .filter((b) => b.date > today)
-    .reduce((sum, b) => sum + b.price_cents, 0);
+    .reduce((sum, b) => sum + cobradoCents(b), 0);
 
   /* --- Servicios más pedidos -------------------------------------------- */
   const byService = new Map<string, ServiceStat>();
@@ -157,7 +161,7 @@ export async function buildStats(): Promise<Stats> {
       revenueCents: 0,
     };
     entry.count += 1;
-    entry.revenueCents += b.price_cents;
+    entry.revenueCents += cobradoCents(b);
     byService.set(b.service_name, entry);
   }
   const topServices = [...byService.values()]
@@ -176,7 +180,7 @@ export async function buildStats(): Promise<Stats> {
       lastVisit: b.date,
     };
     entry.visits += 1;
-    entry.spentCents += b.price_cents;
+    entry.spentCents += cobradoCents(b);
     // Se queda con el nombre y el teléfono de la reserva más reciente.
     if (b.date >= entry.lastVisit) {
       entry.lastVisit = b.date;
@@ -191,7 +195,7 @@ export async function buildStats(): Promise<Stats> {
     .slice(0, 8);
 
   /* --- Totales ----------------------------------------------------------- */
-  const revenueCents = active.reduce((sum, b) => sum + b.price_cents, 0);
+  const revenueCents = active.reduce((sum, b) => sum + cobradoCents(b), 0);
   const cancelledCount = all.filter((b) => b.status === "cancelled").length;
   const decided = active.length + cancelledCount;
 
@@ -214,7 +218,7 @@ export async function buildStats(): Promise<Stats> {
         .reduce((sum, b) => sum + b.deposit_cents, 0),
     },
     cancellationRate: decided ? Math.round((cancelledCount / decided) * 100) : 0,
-    hasEstimated: active.some((b) => b.price_from === 1),
+    hasEstimated: active.some(precioSinConfirmar),
     empty: active.length === 0,
   };
 }

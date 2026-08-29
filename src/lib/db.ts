@@ -66,6 +66,17 @@ export type BookingRow = {
   /** Importe ya cobrado por no presentarse, si se ha llegado a cobrar. */
   no_show_cents: number;
   no_show_ref: string | null;
+
+  /* --- Precio final, cuando el servicio ya está hecho ------------------ */
+  /*
+   * Lo que acabó costando de verdad, que puede no ser lo presupuestado: un
+   * extra sobre la marcha, una reparación, un diseño que llevó el doble. Vale
+   * 0 mientras nadie lo ajuste. Ver src/lib/price.ts.
+   */
+  final_price_cents: number;
+  /** Por qué cambió: "2 uñas con gemas". Es lo que da sentido al número. */
+  price_note: string;
+  price_updated_at: string | null;
 };
 
 export type BlockRow = {
@@ -252,7 +263,10 @@ const SCHEMA = `
     card_label          TEXT NOT NULL DEFAULT '',
     policy_accepted_at  TEXT,
     no_show_cents       INTEGER NOT NULL DEFAULT 0,
-    no_show_ref         TEXT
+    no_show_ref         TEXT,
+    final_price_cents   INTEGER NOT NULL DEFAULT 0,
+    price_note          TEXT NOT NULL DEFAULT '',
+    price_updated_at    TEXT
   );
 
   CREATE INDEX IF NOT EXISTS idx_bookings_date ON bookings (date, status);
@@ -327,6 +341,9 @@ const ADDED_COLUMNS: { table: string; column: string; ddl: string }[] = [
   { table: "bookings", column: "policy_accepted_at", ddl: "TEXT" },
   { table: "bookings", column: "no_show_cents", ddl: "INTEGER NOT NULL DEFAULT 0" },
   { table: "bookings", column: "no_show_ref", ddl: "TEXT" },
+  { table: "bookings", column: "final_price_cents", ddl: "INTEGER NOT NULL DEFAULT 0" },
+  { table: "bookings", column: "price_note", ddl: "TEXT NOT NULL DEFAULT ''" },
+  { table: "bookings", column: "price_updated_at", ddl: "TEXT" },
 ];
 
 async function migrate(instance: Driver) {
@@ -401,6 +418,9 @@ export async function insertBooking(
     | "policy_accepted_at"
     | "no_show_cents"
     | "no_show_ref"
+    | "final_price_cents"
+    | "price_note"
+    | "price_updated_at"
   >,
 ): Promise<void> {
   const db = await driver();
@@ -572,6 +592,27 @@ export async function markNoShowCharged(
     ref,
     code,
   ]);
+}
+
+/**
+ * Ajusta lo que acabó costando una cita ya realizada.
+ *
+ * Se guarda aparte del precio de la reserva a propósito: ese hay que poder
+ * releerlo tal cual lo aceptó la clienta. Aquí solo se añade lo que se supo
+ * después.
+ *
+ * `cents = 0` deshace el ajuste y devuelve la cita a su precio de reserva.
+ */
+export async function setFinalPrice(
+  code: string,
+  cents: number,
+  note: string,
+): Promise<void> {
+  const db = await driver();
+  await db.run(
+    "UPDATE bookings SET final_price_cents = ?, price_note = ?, price_updated_at = ? WHERE code = ?",
+    [cents, note, cents > 0 ? new Date().toISOString() : null, code],
+  );
 }
 
 /* -------------------------------------------------------------------------- */

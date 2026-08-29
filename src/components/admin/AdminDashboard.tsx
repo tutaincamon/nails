@@ -6,7 +6,8 @@ import Link from "next/link";
 import siteConfig from "@config";
 import type { BlockRow, BookingRow, BookingStatus, DiasSueltos, WeeklyHours } from "@/lib/db";
 import { PlanificarMes } from "@/components/admin/PlanificarMes";
-import { formatCents } from "@/lib/money";
+import { formatCents, parseEuros } from "@/lib/money";
+import { cobradoCents, precioAjustado, precioSinConfirmar } from "@/lib/price";
 import { addDays, formatDateLong, formatDuration } from "@/lib/time";
 import { StatusBadge, capitalize, parseAddOns } from "@/components/BookingDetails";
 import { StatsPanel } from "@/components/admin/StatsPanel";
@@ -70,7 +71,7 @@ export function AdminDashboard(props: Props) {
     [props.bookings, props.today],
   );
 
-  const revenue = upcoming.reduce((sum, b) => sum + b.price_cents, 0);
+  const revenue = upcoming.reduce((sum, b) => sum + cobradoCents(b), 0);
   const depositsHeld = upcoming
     .filter((b) => b.deposit_status === "paid")
     .reduce((sum, b) => sum + b.deposit_cents, 0);
@@ -249,6 +250,7 @@ function BookingCard({ booking }: { booking: BookingRow }) {
   const [working, setWorking] = useState(false);
   const [noShowError, setNoShowError] = useState<string | null>(null);
   const [editando, setEditando] = useState(false);
+  const [ajustando, setAjustando] = useState(false);
   const addOns = parseAddOns(booking.addons_json);
 
   async function setStatus(status: BookingStatus) {
@@ -322,9 +324,21 @@ function BookingCard({ booking }: { booking: BookingRow }) {
         <div className="text-right">
           <StatusBadge status={booking.status} />
           <p className="mt-1.5 text-[15px] font-semibold text-ink">
-            {booking.price_from && <span className="text-[12px] font-normal text-muted">desde </span>}
-            {formatCents(booking.price_cents)}
+            {precioSinConfirmar(booking) && (
+              <span className="text-[12px] font-normal text-muted">desde </span>
+            )}
+            {formatCents(cobradoCents(booking))}
           </p>
+          {/*
+            Cuando el precio se ajustó, se enseñan los dos. Ver solo el final
+            deja a medias la pregunta que ella se va a hacer al mirar atrás:
+            no "cuánto cobré", sino "cuánto me desvié de lo presupuestado".
+          */}
+          {precioAjustado(booking) && (
+            <p className="text-[11.5px] text-muted">
+              reserva: <s>{formatCents(booking.price_cents)}</s>
+            </p>
+          )}
           {booking.deposit_status === "paid" && (
             <p className="text-[11.5px] text-green-700">
               señal {formatCents(booking.deposit_cents)} cobrada
@@ -366,6 +380,12 @@ function BookingCard({ booking }: { booking: BookingRow }) {
         </p>
       )}
 
+      {booking.price_note && (
+        <p className="mt-2 bg-bg px-3 py-2 text-[13px] leading-relaxed text-ink">
+          <span className="font-semibold">Precio final:</span> {booking.price_note}
+        </p>
+      )}
+
       {/*
         Estado de la tarjeta guardada. Se enseña siempre que la política esté
         activa, también cuando NO hay tarjeta: enterarse de que no la hay justo
@@ -398,7 +418,38 @@ function BookingCard({ booking }: { booking: BookingRow }) {
         />
       )}
 
+      {ajustando && (
+        <PrecioFinal
+          booking={booking}
+          onCerrar={() => setAjustando(false)}
+          onGuardado={() => {
+            setAjustando(false);
+            router.refresh();
+          }}
+        />
+      )}
+
       <div className="mt-3 flex flex-wrap gap-2">
+        {/*
+          Solo con la cita realizada: antes de hacer el trabajo no hay ningún
+          precio final que poner. Si el servicio era "desde", el botón lo pide
+          en vez de ofrecerlo, porque ese importe está sin cerrar y si nadie lo
+          cierra las cuentas del mes se quedan cortas para siempre.
+        */}
+        {booking.status === "completed" && !ajustando && (
+          <button
+            type="button"
+            className={
+              precioSinConfirmar(booking)
+                ? "btn-sm border border-amber-300 bg-amber-50 text-amber-800 transition-colors hover:bg-amber-100"
+                : "btn-ghost btn-sm"
+            }
+            disabled={working}
+            onClick={() => setAjustando(true)}
+          >
+            {precioSinConfirmar(booking) ? "Poner precio final" : "Ajustar precio"}
+          </button>
+        )}
         {!editando && booking.status !== "cancelled" && (
           <button
             type="button"
@@ -618,6 +669,146 @@ function EditarCita({
         <button type="button" className="btn-ghost btn-sm" disabled={guardando} onClick={onCerrar}>
           Cancelar
         </button>
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Precio final                                                              */
+/* -------------------------------------------------------------------------- */
+
+/** 4250 -> "42,50" ; 3500 -> "35". Para poder corregirlo a mano sin estorbos. */
+function aTexto(cents: number): string {
+  return cents % 100 === 0 ? String(cents / 100) : (cents / 100).toFixed(2).replace(".", ",");
+}
+
+/*
+ * Lo que acabó costando una cita ya realizada.
+ *
+ * Responde a dos cosas que pasan de verdad: los servicios "desde", cuyo precio
+ * solo se sabe al ver el diseño, y los extras que salen sobre la marcha. Sin
+ * un sitio donde apuntarlos, los dos terminan igual —en un número escrito en
+ * el móvil que no llega nunca a las cuentas del mes— y el resumen del año se
+ * queda corto sin que nadie sepa por qué.
+ */
+function PrecioFinal({
+  booking,
+  onCerrar,
+  onGuardado,
+}: {
+  booking: BookingRow;
+  onCerrar: () => void;
+  onGuardado: () => void;
+}) {
+  const [euros, setEuros] = useState(aTexto(cobradoCents(booking)));
+  const [nota, setNota] = useState(booking.price_note);
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const cents = parseEuros(euros);
+  const diferencia = cents === null ? 0 : cents - booking.price_cents;
+
+  async function enviar(valor: string) {
+    setGuardando(true);
+    setError(null);
+    const r = await fetch(`/api/admin/bookings/${encodeURIComponent(booking.code)}/precio`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ euros: valor, nota }),
+    });
+    const d = (await r.json()) as { ok: boolean; error?: string };
+    setGuardando(false);
+    if (!d.ok) {
+      setError(d.error ?? "No se pudo guardar el precio.");
+      return;
+    }
+    onGuardado();
+  }
+
+  return (
+    <div className="mt-3 border border-primary/40 bg-bg p-4">
+      <p className="text-[14px] font-semibold text-ink">¿En cuánto quedó al final?</p>
+      <p className="mt-1 text-[12.5px] leading-relaxed text-muted">
+        En la reserva puso {booking.price_from ? "desde " : ""}
+        {formatCents(booking.price_cents)}. Cambiar esto no le cobra nada a la clienta ni le
+        manda ningún email: solo deja apuntado lo que se cobró para que las cuentas cuadren.
+      </p>
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-[9rem_1fr]">
+        <div>
+          <label className="label" htmlFor={`p-${booking.code}`}>
+            Precio cobrado
+          </label>
+          <div className="relative">
+            <input
+              id={`p-${booking.code}`}
+              className="field py-1.5 pr-7"
+              inputMode="decimal"
+              value={euros}
+              onChange={(e) => setEuros(e.target.value)}
+              placeholder="42,50"
+            />
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[13px] text-muted">
+              €
+            </span>
+          </div>
+        </div>
+        <div>
+          <label className="label" htmlFor={`pn-${booking.code}`}>
+            ¿Por qué? <span className="font-normal text-muted">(opcional)</span>
+          </label>
+          <input
+            id={`pn-${booking.code}`}
+            className="field py-1.5"
+            value={nota}
+            onChange={(e) => setNota(e.target.value)}
+            placeholder="2 uñas con gemas"
+            maxLength={200}
+          />
+        </div>
+      </div>
+
+      {/*
+        La diferencia se enseña mientras escribe, no al guardar: es la forma de
+        cazar un 350 donde quería poner 35 antes de que entre en la caja.
+      */}
+      {cents !== null && diferencia !== 0 && (
+        <p className="mt-2 text-[12.5px] text-muted">
+          {diferencia > 0 ? "+" : "−"}
+          {formatCents(Math.abs(diferencia))} sobre lo presupuestado
+        </p>
+      )}
+      {euros.trim() !== "" && cents === null && (
+        <p className="mt-2 text-[12.5px] text-amber-700">
+          Escríbelo en euros, por ejemplo 42,50.
+        </p>
+      )}
+
+      {error && <p className="mt-2 text-[12.5px] text-red-700">{error}</p>}
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          className="btn-primary btn-sm"
+          disabled={guardando || cents === null}
+          onClick={() => enviar(euros)}
+        >
+          {guardando ? "Guardando…" : "Guardar precio"}
+        </button>
+        <button type="button" className="btn-ghost btn-sm" disabled={guardando} onClick={onCerrar}>
+          Cancelar
+        </button>
+        {booking.final_price_cents > 0 && (
+          <button
+            type="button"
+            className="btn-ghost btn-sm text-muted"
+            disabled={guardando}
+            onClick={() => enviar("")}
+          >
+            Volver al precio de la reserva
+          </button>
+        )}
       </div>
     </div>
   );

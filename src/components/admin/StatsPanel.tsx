@@ -185,12 +185,15 @@ export function StatsPanel({ stats }: { stats: Stats }) {
           <strong className="text-ink">Cómo se cuentan estos números.</strong> Suman las citas
           confirmadas y las ya realizadas. Las canceladas no suman, y las que esperan la señal
           tampoco, porque todavía no son una cita en firme.
-          {stats.cancellationRate > 0 && ` Se te cancela el ${stats.cancellationRate}% de las citas.`}
+          {stats.cancellationRate > 0 && ` Se te cancela el ${stats.cancellationRate}% de las citas.`}{" "}
+          De cada cita cuenta lo que se cobró: si le pusiste precio final al terminarla, es ese el
+          que suma, no el de la reserva.
         </p>
         {stats.hasEstimated && (
           <p className="mt-1.5">
-            Hay citas de servicios con precio «desde», que se guardan por su importe mínimo. Los
-            ingresos reales serán iguales o mayores que lo que ves aquí, nunca menores.
+            Hay citas de servicios con precio «desde» a las que nadie ha puesto todavía el precio
+            final, así que se cuentan por su importe mínimo: lo que ganaste de verdad es igual o
+            más, nunca menos. Para cerrarlas, búscalas en Histórico y pulsa «Poner precio final».
           </p>
         )}
       </div>

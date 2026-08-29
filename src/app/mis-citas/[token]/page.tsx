@@ -8,6 +8,7 @@ import { SalirDispositivo } from "@/components/SalirDispositivo";
 import { bookingsForEmail, type BookingRow } from "@/lib/db";
 import { StatusBadge, capitalize } from "@/components/BookingDetails";
 import { formatCents } from "@/lib/money";
+import { cobradoCents } from "@/lib/price";
 import { formatDateLong, formatDuration, hoursUntil } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
@@ -107,7 +108,7 @@ function Ficha({ cita, proxima = false }: { cita: BookingRow; proxima?: boolean 
           </p>
           <p className="mt-0.5 text-[13.5px] text-muted">
             {cita.service_name} · {formatDuration(cita.duration_min)} ·{" "}
-            {formatCents(cita.price_cents)}
+            {formatCents(cobradoCents(cita))}
           </p>
         </div>
         <StatusBadge status={cita.status} />

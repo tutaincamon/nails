@@ -1,6 +1,7 @@
 import siteConfig from "@config";
 import type { BookingRow } from "@/lib/db";
 import { formatCents } from "@/lib/money";
+import { cobradoCents, precioSinConfirmar } from "@/lib/price";
 import { formatDateLong, formatDuration } from "@/lib/time";
 
 const STATUS_LABELS: Record<BookingRow["status"], { text: string; className: string }> = {
@@ -24,7 +25,13 @@ export function StatusBadge({ status }: { status: BookingRow["status"] }) {
 /** Ficha con todos los datos de una cita. Se reutiliza en varias páginas. */
 export function BookingDetails({ booking }: { booking: BookingRow }) {
   const addOns = parseAddOns(booking.addons_json);
-  const rest = Math.max(0, booking.price_cents - (booking.deposit_status === "paid" ? booking.deposit_cents : 0));
+  /*
+   * Si la cita ya se hizo y el precio se cerró en otra cifra, manda esa: es la
+   * que la clienta pagó, y verla aquí es lo único que le permite comprobar que
+   * su historial cuadra con lo que recuerda.
+   */
+  const precio = cobradoCents(booking);
+  const rest = Math.max(0, precio - (booking.deposit_status === "paid" ? booking.deposit_cents : 0));
 
   return (
     <dl className="divide-y divide-line">
@@ -42,12 +49,12 @@ export function BookingDetails({ booking }: { booking: BookingRow }) {
       />
       <Row
         label="Precio"
-        value={`${booking.price_from ? "desde " : ""}${formatCents(booking.price_cents)}`}
+        value={`${precioSinConfirmar(booking) ? "desde " : ""}${formatCents(precio)}`}
       />
       {booking.deposit_status === "paid" && (
         <Row
           label="Señal pagada"
-          value={`${formatCents(booking.deposit_cents)} · quedan ${formatCents(rest)}${booking.price_from ? " o más" : ""} ${siteConfig.venue.payWhere}`}
+          value={`${formatCents(booking.deposit_cents)} · quedan ${formatCents(rest)}${precioSinConfirmar(booking) ? " o más" : ""} ${siteConfig.venue.payWhere}`}
         />
       )}
       {booking.deposit_status === "pending" && (

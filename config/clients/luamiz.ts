@@ -44,7 +44,8 @@ export const luamiz = {
     phone: "633 74 55 08",
     /* Solo dígitos con prefijo, que es lo que espera el enlace de WhatsApp. */
     whatsapp: "34633745508",
-    instagram: "beautynailsindiradiazz",
+    /* Sin la arroba: la web y los emails se la ponen al construir el enlace. */
+    instagram: "luamiz.nails",
     tiktok: "",
     /* El suyo, en alta resolución, recortado en círculo con fondo transparente. */
     logo: "/luamiz/logo.png",

@@ -5,6 +5,7 @@ import { formatDateLong, formatDuration } from "@/lib/time";
 import { ownerEmail } from "@/lib/business";
 import { noShowCents } from "@/lib/policy";
 import { contactSentence } from "@/lib/business";
+import { extrasDe, textoExtra } from "@/lib/servicios";
 
 /*
  * Plantillas de email en HTML con estilos en línea y tablas: es la única forma
@@ -13,15 +14,8 @@ import { contactSentence } from "@/lib/business";
 
 const { business, theme, deposit } = siteConfig;
 
-export type AddOnSnapshot = { name: string; price: number };
-
-function addOnsOf(booking: BookingRow): AddOnSnapshot[] {
-  try {
-    return JSON.parse(booking.addons_json) as AddOnSnapshot[];
-  } catch {
-    return [];
-  }
-}
+/* Los extras de la cita, con su cantidad. Ver src/lib/servicios.ts. */
+const addOnsOf = extrasDe;
 
 function escapeHtml(value: string): string {
   return value
@@ -86,7 +80,7 @@ function detailsTable(booking: BookingRow): string {
 
   const extras =
     addOns.length > 0
-      ? row("Extras", addOns.map((a) => `${escapeHtml(a.name)} (+${formatCents(Math.round(a.price * 100))})`).join("<br>"))
+      ? row("Extras", addOns.map((a) => escapeHtml(textoExtra(a))).join("<br>"))
       : "";
 
   /*
@@ -148,6 +142,7 @@ function calloutBox(text: string): string {
 /*  1. Confirmación para la clienta                                           */
 /* -------------------------------------------------------------------------- */
 export function clientConfirmation(booking: BookingRow, manageUrl: string) {
+  const addOns = addOnsOf(booking);
   const depositLine =
     booking.deposit_status === "paid"
       ? `Señal de ${formatCents(booking.deposit_cents)} pagada. Se descuenta del precio final: ${siteConfig.venue.payWhere} quedarían ${formatCents(Math.max(0, booking.price_cents - booking.deposit_cents))}${booking.price_from ? " o más, según el diseño" : ""}.`
@@ -181,6 +176,9 @@ export function clientConfirmation(booking: BookingRow, manageUrl: string) {
       `Cita confirmada en ${business.name}`,
       ``,
       `Servicio: ${booking.service_name}`,
+      // El texto plano también: hay quien lo lee así, y un extra por uña puede
+      // ser la mitad de la factura.
+      addOns.length ? `Extras: ${addOns.map(textoExtra).join(', ')}` : '',
       `Día: ${formatDateLong(booking.date)}`,
       `Hora: ${booking.start_time} - ${booking.end_time} (${formatDuration(booking.duration_min)})`,
       `Precio: ${formatCents(booking.price_cents)}${booking.price_from ? " (desde)" : ""}`,
@@ -222,7 +220,6 @@ export function ownerNotification(booking: BookingRow, adminUrl: string) {
           )
         : ""
     }
-    ${addOns.length ? "" : ""}
     ${button(adminUrl, "Abrir la agenda")}`;
 
   return {
@@ -242,6 +239,7 @@ export function ownerNotification(booking: BookingRow, adminUrl: string) {
         ? `Dirección: ${booking.client_address.replace(/\n/g, ", ")}`
         : "",
       `Servicio: ${booking.service_name}`,
+      addOns.length ? `Extras: ${addOns.map(textoExtra).join(', ')}` : '',
       `Día: ${formatDateLong(booking.date)} ${booking.start_time}-${booking.end_time}`,
       `Duración: ${formatDuration(booking.duration_min)}`,
       `Precio: ${formatCents(booking.price_cents)}`,

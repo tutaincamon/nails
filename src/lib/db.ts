@@ -28,9 +28,24 @@ export type BookingRow = {
   code: string;
   created_at: string;
   status: BookingStatus;
+  /* Primer servicio de la cita. Se conserva por comodidad al filtrar. */
   service_id: string;
+  /** Todos los servicios juntos: "Semipermanente + Pedicura básica". */
   service_name: string;
   category_name: string;
+  /*
+   * Los servicios de la cita, uno a uno, con lo que costaba cada uno el día en
+   * que se reservó: [{ id, name, price, durationMin, categoryName }].
+   *
+   * Se guarda la lista y no solo el nombre junto porque una cita puede ser
+   * varios servicios, y las estadísticas necesitan repartir el importe entre
+   * ellos para saber qué es lo que de verdad se pide.
+   *
+   * Vacío en las reservas anteriores a que esto existiera: ahí manda
+   * service_name. Ver serviciosDe() en src/lib/servicios.ts.
+   */
+  services_json: string;
+  /** Extras elegidos: [{ name, price, units }], con price por unidad. */
   addons_json: string;
   price_cents: number;
   price_from: number;
@@ -240,6 +255,7 @@ const SCHEMA = `
     service_id       TEXT NOT NULL,
     service_name     TEXT NOT NULL,
     category_name    TEXT NOT NULL,
+    services_json    TEXT NOT NULL DEFAULT '[]',
     addons_json      TEXT NOT NULL DEFAULT '[]',
     price_cents      INTEGER NOT NULL,
     price_from       INTEGER NOT NULL DEFAULT 0,
@@ -344,6 +360,7 @@ const ADDED_COLUMNS: { table: string; column: string; ddl: string }[] = [
   { table: "bookings", column: "final_price_cents", ddl: "INTEGER NOT NULL DEFAULT 0" },
   { table: "bookings", column: "price_note", ddl: "TEXT NOT NULL DEFAULT ''" },
   { table: "bookings", column: "price_updated_at", ddl: "TEXT" },
+  { table: "bookings", column: "services_json", ddl: "TEXT NOT NULL DEFAULT '[]'" },
 ];
 
 async function migrate(instance: Driver) {
@@ -426,11 +443,11 @@ export async function insertBooking(
   const db = await driver();
   await db.run(
     `INSERT INTO bookings (
-      code, created_at, status, service_id, service_name, category_name, addons_json,
+      code, created_at, status, service_id, service_name, category_name, services_json, addons_json,
       price_cents, price_from, duration_min, date, start_time, end_time,
       client_name, client_email, client_phone, client_address, notes,
       deposit_cents, deposit_status, payment_ref, manage_token
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [
       row.code,
       row.created_at,
@@ -438,6 +455,7 @@ export async function insertBooking(
       row.service_id,
       row.service_name,
       row.category_name,
+      row.services_json,
       row.addons_json,
       row.price_cents,
       row.price_from,

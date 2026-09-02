@@ -254,11 +254,16 @@ export const luamiz = {
         { id: "francesa", name: "Francesa", price: 5, durationMin: 15 },
         { id: "efectos", name: "Efectos y diseños", price: 3, durationMin: 10 },
         /*
-         * "Desde 1 € por uña" en su tarifa. El sistema no sabe cobrar por
-         * unidad, así que va el mínimo y se ajusta en la cita. ESTIMADO el
-         * tiempo: no está en su hoja.
+         * "1 € por uña" en su tarifa: en las diez uñas son 10 €, y así se
+         * cobra ya. ESTIMADO el tiempo por uña: no está en su hoja.
          */
-        { id: "piedras", name: "Piedras o cristales", price: 1, durationMin: 10 },
+        {
+          id: "piedras",
+          name: "Piedras o cristales",
+          price: 1,
+          durationMin: 2,
+          perUnit: { singular: "uña", plural: "uñas", max: 10 },
+        },
         { id: "cambio-forma", name: "Cambio de forma", price: 5, durationMin: 5 },
       ],
       services: [
@@ -345,7 +350,14 @@ export const luamiz = {
       addOns: [
         { id: "pies-francesa", name: "Francesa", price: 5, durationMin: 15 },
         { id: "pies-efectos", name: "Efectos y diseños", price: 3, durationMin: 10 },
-        { id: "pies-piedras", name: "Piedras o cristales", price: 1, durationMin: 10 },
+        /* Las de los pies se cuentan aparte de las de las manos. */
+        {
+          id: "pies-piedras",
+          name: "Piedras o cristales",
+          price: 1,
+          durationMin: 2,
+          perUnit: { singular: "uña", plural: "uñas", max: 10 },
+        },
       ],
       /*
        * Falta "Pedicura Spa (solo)", que sí está en su hoja de tiempos (45 min)

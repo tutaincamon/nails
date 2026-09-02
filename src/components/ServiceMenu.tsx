@@ -88,8 +88,15 @@ export function ServiceMenu() {
               {active.addOns.map((addOn) => (
                 <li key={addOn.id} className="flex justify-between gap-4">
                   <span>{addOn.name}</span>
+                  {/*
+                    Lo que se cobra por pieza se anuncia por pieza. Poner "+1 €"
+                    a secas en las piedras promete un precio que luego no es.
+                  */}
                   <span className="whitespace-nowrap font-semibold text-ink">
                     + {formatCents(Math.round(addOn.price * 100))}
+                    {addOn.perUnit && (
+                      <span className="font-normal text-muted"> / {addOn.perUnit.singular}</span>
+                    )}
                   </span>
                 </li>
               ))}

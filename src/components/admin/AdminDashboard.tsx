@@ -9,7 +9,8 @@ import { PlanificarMes } from "@/components/admin/PlanificarMes";
 import { formatCents, parseEuros } from "@/lib/money";
 import { cobradoCents, precioAjustado, precioSinConfirmar } from "@/lib/price";
 import { addDays, formatDateLong, formatDuration } from "@/lib/time";
-import { StatusBadge, capitalize, parseAddOns } from "@/components/BookingDetails";
+import { StatusBadge, capitalize } from "@/components/BookingDetails";
+import { extrasDe, textoExtra } from "@/lib/servicios";
 import { StatsPanel } from "@/components/admin/StatsPanel";
 import type { Stats } from "@/lib/stats";
 
@@ -251,7 +252,7 @@ function BookingCard({ booking }: { booking: BookingRow }) {
   const [noShowError, setNoShowError] = useState<string | null>(null);
   const [editando, setEditando] = useState(false);
   const [ajustando, setAjustando] = useState(false);
-  const addOns = parseAddOns(booking.addons_json);
+  const addOns = extrasDe(booking);
 
   async function setStatus(status: BookingStatus) {
     setWorking(true);
@@ -317,7 +318,11 @@ function BookingCard({ booking }: { booking: BookingRow }) {
           </p>
           {addOns.length > 0 && (
             <p className="text-[13px] text-muted">
-              + {addOns.map((a) => a.name).join(", ")}
+              {/*
+                Con la cantidad: "Piedras ×10" y "Piedras ×2" son dos trabajos
+                distintos, y ella necesita saber cuál es antes de salir de casa.
+              */}
+              + {addOns.map(textoExtra).join(", ")}
             </p>
           )}
         </div>

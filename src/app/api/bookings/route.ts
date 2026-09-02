@@ -1,11 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createBooking, type PaymentChoice } from "@/lib/bookings";
 import { leerPase } from "@/lib/verification";
+import type { AddOnPick } from "@/lib/catalog";
 
 export const runtime = "nodejs";
 
 type Payload = {
   service?: unknown;
+  services?: unknown;
   addons?: unknown;
   date?: unknown;
   time?: unknown;
@@ -57,11 +59,35 @@ export async function POST(request: NextRequest) {
   }
 
   const payment: PaymentChoice = str(payload.payment) === "deposit" ? "deposit" : "on_site";
-  const addons = Array.isArray(payload.addons) ? payload.addons.filter((a) => typeof a === "string") : [];
+
+  /*
+   * Los servicios llegan como lista. Se acepta también el campo antiguo con un
+   * solo id, por si queda alguna pestaña abierta con la versión anterior de la
+   * página: perder una reserva por eso sería absurdo.
+   */
+  const serviceIds = Array.isArray(payload.services)
+    ? payload.services.filter((s): s is string => typeof s === "string")
+    : [str(payload.service)].filter(Boolean);
+
+  /*
+   * Cada extra puede venir como texto ("francesa") o con cantidad
+   * ({ id: "piedras", units: 10 }). Aquí solo se recoge QUÉ pidió; cuántas
+   * caben de verdad y cuánto suman lo decide el catálogo en el servidor.
+   */
+  const addOns: AddOnPick[] = (Array.isArray(payload.addons) ? payload.addons : []).flatMap(
+    (crudo) => {
+      if (typeof crudo === "string") return [{ id: crudo, units: 1 }];
+      if (crudo && typeof crudo === "object") {
+        const { id, units } = crudo as { id?: unknown; units?: unknown };
+        if (typeof id === "string") return [{ id, units: Number(units) || 1 }];
+      }
+      return [];
+    },
+  );
 
   const result = await createBooking({
-    serviceId: str(payload.service),
-    addOnIds: addons as string[],
+    serviceIds,
+    addOns,
     date,
     time,
     name: str(payload.name),

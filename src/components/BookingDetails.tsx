@@ -2,6 +2,7 @@ import siteConfig from "@config";
 import type { BookingRow } from "@/lib/db";
 import { formatCents } from "@/lib/money";
 import { cobradoCents, precioSinConfirmar } from "@/lib/price";
+import { extrasDe, serviciosDe, textoExtra } from "@/lib/servicios";
 import { formatDateLong, formatDuration } from "@/lib/time";
 
 const STATUS_LABELS: Record<BookingRow["status"], { text: string; className: string }> = {
@@ -24,7 +25,8 @@ export function StatusBadge({ status }: { status: BookingRow["status"] }) {
 
 /** Ficha con todos los datos de una cita. Se reutiliza en varias páginas. */
 export function BookingDetails({ booking }: { booking: BookingRow }) {
-  const addOns = parseAddOns(booking.addons_json);
+  const servicios = serviciosDe(booking);
+  const addOns = extrasDe(booking);
   /*
    * Si la cita ya se hizo y el precio se cerró en otra cifra, manda esa: es la
    * que la clienta pagó, y verla aquí es lo único que le permite comprobar que
@@ -35,12 +37,12 @@ export function BookingDetails({ booking }: { booking: BookingRow }) {
 
   return (
     <dl className="divide-y divide-line">
-      <Row label="Servicio" value={booking.service_name} />
+      <Row
+        label={servicios.length > 1 ? "Servicios" : "Servicio"}
+        value={servicios.map((s) => s.name).join(" + ")}
+      />
       {addOns.length > 0 && (
-        <Row
-          label="Extras"
-          value={addOns.map((a) => `${a.name} (+${formatCents(Math.round(a.price * 100))})`).join(", ")}
-        />
+        <Row label="Extras" value={addOns.map(textoExtra).join(", ")} />
       )}
       <Row label="Día" value={capitalize(formatDateLong(booking.date))} />
       <Row
@@ -90,14 +92,6 @@ function Row({ label, value, mono = false }: { label: string; value: string; mon
   );
 }
 
-export function parseAddOns(json: string): { name: string; price: number }[] {
-  try {
-    const parsed = JSON.parse(json);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
 
 export function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);

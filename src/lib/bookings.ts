@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import siteConfig from "@config";
 import { isSlotBookable } from "@/lib/availability";
-import { quote } from "@/lib/catalog";
+import { nombreDe, quote, type AddOnPick } from "@/lib/catalog";
 import {
   addDays,
   endTime,
@@ -35,8 +35,9 @@ import { contactSentence } from "@/lib/business";
 export type PaymentChoice = "deposit" | "on_site";
 
 export type CreateBookingInput = {
-  serviceId: string;
-  addOnIds: string[];
+  /** Uno o varios: una cita puede ser retirada + acrílicas, o manos y pies. */
+  serviceIds: string[];
+  addOns: AddOnPick[];
   date: string;
   time: string;
   name: string;
@@ -109,7 +110,7 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
 
   // El precio y la duración se recalculan siempre en el servidor: lo que llega
   // del navegador solo se usa para saber QUÉ se ha elegido, nunca cuánto vale.
-  const q = quote(input.serviceId, input.addOnIds);
+  const q = quote(input.serviceIds, input.addOns);
   if (!q) return { ok: false, error: "Ese servicio ya no está disponible.", field: "serviceId" };
 
   const slotCheck = await isSlotBookable(input.date, input.time, q.durationMin);
@@ -135,10 +136,26 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     code,
     created_at: new Date().toISOString(),
     status: (needsCheckout ? "pending_payment" : "confirmed") as BookingRow["status"],
-    service_id: q.service.id,
-    service_name: q.service.name,
-    category_name: q.service.categoryName,
-    addons_json: JSON.stringify(q.addOns.map((a) => ({ name: a.name, price: a.price }))),
+    /* El primero, solo para poder filtrar; el nombre lleva todos. */
+    service_id: q.services[0].id,
+    service_name: nombreDe(q.services),
+    category_name: q.services[0].categoryName,
+    /*
+     * Se guarda lo que costaba cada servicio HOY. Si mañana ella sube la
+     * tarifa, esta cita tiene que seguir contando por lo que se cobró.
+     */
+    services_json: JSON.stringify(
+      q.services.map((s) => ({
+        id: s.id,
+        name: s.name,
+        price: s.price,
+        durationMin: s.durationMin,
+        categoryName: s.categoryName,
+      })),
+    ),
+    addons_json: JSON.stringify(
+      q.addOns.map((a) => ({ name: a.name, price: a.price, units: a.units })),
+    ),
     price_cents: q.totalCents,
     price_from: q.isFrom ? 1 : 0,
     duration_min: q.durationMin,

@@ -1,6 +1,7 @@
 import siteConfig from "@config";
 import { bookingsFrom, type BookingRow } from "@/lib/db";
 import { cobradoCents, precioSinConfirmar } from "@/lib/price";
+import { serviciosDe, type ServicioGuardado } from "@/lib/servicios";
 import { nowInBusinessTz } from "@/lib/time";
 
 /*
@@ -79,6 +80,33 @@ export type Stats = {
   empty: boolean;
 };
 
+/**
+ * Reparte el importe de una cita entre sus servicios, a prorrata de lo que
+ * costaba cada uno.
+ *
+ * Al último se le da lo que quede en vez de su parte calculada, de forma que
+ * las partes suman exactamente el total: si no, los redondeos harían que "lo
+ * que más te piden" no cuadrase nunca con los ingresos del mes.
+ */
+function repartir(servicios: ServicioGuardado[], total: number): number[] {
+  const ultimo = servicios.length - 1;
+  const base = servicios.reduce((sum, s) => sum + Math.round(s.price * 100), 0);
+
+  // Sin precios de referencia (una fila antigua rara), a partes iguales.
+  if (base <= 0) {
+    const parte = Math.floor(total / servicios.length);
+    return servicios.map((_, i) => (i === ultimo ? total - parte * ultimo : parte));
+  }
+
+  let dado = 0;
+  return servicios.map((servicio, i) => {
+    if (i === ultimo) return total - dado;
+    const parte = Math.round((total * Math.round(servicio.price * 100)) / base);
+    dado += parte;
+    return parte;
+  });
+}
+
 function monthKey(date: string): string {
   return date.slice(0, 7);
 }
@@ -153,16 +181,32 @@ export async function buildStats(): Promise<Stats> {
     .reduce((sum, b) => sum + cobradoCents(b), 0);
 
   /* --- Servicios más pedidos -------------------------------------------- */
+  /*
+   * Una cita puede llevar varios servicios, y aquí cuenta cada uno por su
+   * cuenta: si se agrupara por la cita entera, "Semipermanente + Pedicura"
+   * sería una fila propia y ni la manicura ni la pedicura aparecerían por lo
+   * que de verdad se piden.
+   *
+   * El importe de la cita se reparte a prorrata de lo que costaba cada
+   * servicio. Los extras y cualquier ajuste de precio final van dentro de ese
+   * reparto: no hay forma de saber a cuál de los dos servicios pertenecían, y
+   * repartirlos es más honesto que colgárselos enteros al primero.
+   */
   const byService = new Map<string, ServiceStat>();
   for (const b of active) {
-    const entry = byService.get(b.service_name) ?? {
-      name: b.service_name,
-      count: 0,
-      revenueCents: 0,
-    };
-    entry.count += 1;
-    entry.revenueCents += cobradoCents(b);
-    byService.set(b.service_name, entry);
+    const servicios = serviciosDe(b);
+    const partes = repartir(servicios, cobradoCents(b));
+
+    servicios.forEach((servicio, i) => {
+      const entry = byService.get(servicio.name) ?? {
+        name: servicio.name,
+        count: 0,
+        revenueCents: 0,
+      };
+      entry.count += 1;
+      entry.revenueCents += partes[i];
+      byService.set(servicio.name, entry);
+    });
   }
   const topServices = [...byService.values()]
     .sort((a, b) => b.count - a.count || b.revenueCents - a.revenueCents)

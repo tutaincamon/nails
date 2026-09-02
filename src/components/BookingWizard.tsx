@@ -2,8 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import siteConfig from "@config";
-import { addOnsForService, quote } from "@/lib/catalog";
+import siteConfig, { type AddOn } from "@config";
+import {
+  addOnsForServices,
+  gruposDeExtras,
+  maxUnidades,
+  picksToParam,
+  quote,
+  type AddOnPick,
+} from "@/lib/catalog";
 import {
   VerificarEmail,
   olvidarRecuerdoLocal,
@@ -26,8 +33,13 @@ export function BookingWizard() {
 
   const [step, setStep] = useState<Step>(0);
   const [categoryId, setCategoryId] = useState(siteConfig.categories[0].id);
-  const [serviceId, setServiceId] = useState<string | null>(null);
-  const [addOnIds, setAddOnIds] = useState<string[]>([]);
+  /*
+   * Varios servicios en la misma cita. Una cita real suele ser más de uno:
+   * retirar el trabajo de otro centro y poner acrílicas, o hacerse manos y
+   * pies de una sentada sin tener que reservar dos veces.
+   */
+  const [serviceIds, setServiceIds] = useState<string[]>([]);
+  const [picks, setPicks] = useState<AddOnPick[]>([]);
   const [date, setDate] = useState<string | null>(null);
   const [time, setTime] = useState<string | null>(null);
   const [payment, setPayment] = useState<"deposit" | "on_site">(
@@ -77,23 +89,56 @@ export function BookingWizard() {
     );
     if (!category) return;
     setCategoryId(category.id);
-    setServiceId(requested);
+    setServiceIds([requested]);
     setStep(1);
   }, [params]);
 
   const current = useMemo(
-    () => (serviceId ? quote(serviceId, addOnIds) : null),
-    [serviceId, addOnIds],
+    () => (serviceIds.length > 0 ? quote(serviceIds, picks) : null),
+    [serviceIds, picks],
   );
   const category = siteConfig.categories.find((c) => c.id === categoryId)!;
-  const availableAddOns = serviceId ? addOnsForService(serviceId) : [];
+  const grupos = gruposDeExtras(serviceIds);
+
+  /** Marca o desmarca un servicio sin tocar los demás. */
+  function alternarServicio(id: string) {
+    setServiceIds((previos) =>
+      previos.includes(id) ? previos.filter((s) => s !== id) : [...previos, id],
+    );
+  }
+
+  /*
+   * Al quitar un servicio pueden quedar extras de una categoría que ya no está
+   * elegida. Se limpian solos: cobrar "piedras de los pies" en una cita que ya
+   * no lleva pedicura sería cobrar de más sin que se vea por qué.
+   */
+  useEffect(() => {
+    const validos = new Set(addOnsForServices(serviceIds).map((a) => a.id));
+    setPicks((previos) => {
+      const limpios = previos.filter((p) => validos.has(p.id));
+      return limpios.length === previos.length ? previos : limpios;
+    });
+  }, [serviceIds]);
+
+  /** Cuántas unidades hay elegidas de un extra. 0 = no está elegido. */
+  const unidadesDe = (id: string) => picks.find((p) => p.id === id)?.units ?? 0;
+
+  function ponerUnidades(id: string, units: number) {
+    setPicks((previos) => {
+      if (units <= 0) return previos.filter((p) => p.id !== id);
+      if (previos.some((p) => p.id === id)) {
+        return previos.map((p) => (p.id === id ? { ...p, units } : p));
+      }
+      return [...previos, { id, units }];
+    });
+  }
 
   /* --- Carga de huecos ---------------------------------------------------- */
-  const loadWeek = useCallback(async (from: string, service: string, addons: string[]) => {
+  const loadWeek = useCallback(async (from: string, servicios: string[], addons: AddOnPick[]) => {
     setLoadingSlots(true);
     try {
-      const query = new URLSearchParams({ service, from, days: "7" });
-      if (addons.length) query.set("addons", addons.join(","));
+      const query = new URLSearchParams({ service: servicios.join(","), from, days: "7" });
+      if (addons.length) query.set("addons", picksToParam(addons));
       const response = await fetch(`/api/availability?${query}`, { cache: "no-store" });
       if (!response.ok) throw new Error("No se pudo cargar la agenda.");
       const data = (await response.json()) as { days: DayAvailability[] };
@@ -106,16 +151,20 @@ export function BookingWizard() {
     }
   }, []);
 
-  // Al elegir servicio, cambiar los extras o pasar de semana, se piden los huecos.
+  // Al cambiar los servicios, los extras o la semana, se piden los huecos.
   useEffect(() => {
-    if (!serviceId) return;
-    void loadWeek(weekStart, serviceId, addOnIds);
-  }, [serviceId, addOnIds, weekStart, loadWeek]);
+    if (serviceIds.length === 0) return;
+    void loadWeek(weekStart, serviceIds, picks);
+  }, [serviceIds, picks, weekStart, loadWeek]);
 
-  // La hora elegida deja de ser válida si cambia el servicio o los extras.
+  /*
+   * La hora elegida deja de valer en cuanto cambia la selección: si añade la
+   * pedicura después de elegir hora, la cita pasa de 20 a 50 minutos y ese
+   * hueco puede haber dejado de caber.
+   */
   useEffect(() => {
     setTime(null);
-  }, [serviceId, addOnIds]);
+  }, [serviceIds, picks]);
 
   const goTo = (next: Step) => {
     setError(null);
@@ -126,7 +175,7 @@ export function BookingWizard() {
 
   /* --- Envío -------------------------------------------------------------- */
   async function submit() {
-    if (!serviceId || !date || !time) return;
+    if (serviceIds.length === 0 || !date || !time) return;
     setSubmitting(true);
     setError(null);
     setErrorField(null);
@@ -136,8 +185,8 @@ export function BookingWizard() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          service: serviceId,
-          addons: addOnIds,
+          services: serviceIds,
+          addons: picks,
           date,
           time,
           name: form.name,
@@ -163,7 +212,7 @@ export function BookingWizard() {
         // Si el hueco se ocupó mientras rellenaba el formulario, se vuelve al paso 1.
         if (response.status === 409) {
           setTime(null);
-          void loadWeek(weekStart, serviceId, addOnIds);
+          void loadWeek(weekStart, serviceIds, picks);
           goTo(1);
         }
         return;
@@ -178,7 +227,7 @@ export function BookingWizard() {
   }
 
   const canContinue: Record<Step, boolean> = {
-    0: Boolean(serviceId),
+    0: serviceIds.length > 0,
     1: Boolean(date && time),
     2: Boolean(pase) && form.name.trim().length >= 2 && form.phone.trim().length >= 9,
     3: accepted && !submitting,
@@ -203,39 +252,48 @@ export function BookingWizard() {
           <div className="animate-rise mt-8">
             <h2 className="text-[26px]">¿Qué te apetece hacerte?</h2>
             <p className="mt-1.5 text-[14px] text-muted">
-              Cada servicio tiene su propia duración, y la agenda reserva ese tiempo entero para ti.
+              Puedes elegir más de uno y hacértelo todo en la misma cita: manos y pies, o una
+              retirada y un trabajo nuevo. Se suman los tiempos y la agenda te reserva el rato
+              entero.
             </p>
 
             <div className="mt-6 flex flex-wrap gap-2">
-              {siteConfig.categories.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => setCategoryId(c.id)}
-                  className={`btn-sm border ${
-                    c.id === categoryId
-                      ? "border-primary bg-primary text-white"
-                      : "border-line bg-surface text-muted hover:border-primary hover:text-primary"
-                  }`}
-                >
-                  {c.name}
-                </button>
-              ))}
+              {siteConfig.categories.map((c) => {
+                /* Cuántos servicios lleva elegidos de esta categoría. */
+                const elegidos = c.services.filter((s) => serviceIds.includes(s.id)).length;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setCategoryId(c.id)}
+                    className={`btn-sm border ${
+                      c.id === categoryId
+                        ? "border-primary bg-primary text-white"
+                        : "border-line bg-surface text-muted hover:border-primary hover:text-primary"
+                    }`}
+                  >
+                    {c.name}
+                    {/*
+                      Sin esto, quien elige la manicura y se va a la pestaña de
+                      pies deja de ver lo que llevaba elegido y cree que lo ha
+                      perdido.
+                    */}
+                    {elegidos > 0 && <span className="ml-1.5 opacity-70">{elegidos}</span>}
+                  </button>
+                );
+              })}
             </div>
 
             <p className="mt-4 text-[13px] text-muted">{category.subtitle}</p>
 
             <ul className="mt-4 space-y-2.5">
               {category.services.map((service) => {
-                const selected = serviceId === service.id;
+                const selected = serviceIds.includes(service.id);
                 return (
                   <li key={service.id}>
                     <button
                       type="button"
-                      onClick={() => {
-                        setServiceId(service.id);
-                        setAddOnIds([]);
-                      }}
+                      onClick={() => alternarServicio(service.id)}
                       aria-pressed={selected}
                       className={`flex w-full items-start gap-4 border p-4 text-left transition-all ${
                         selected
@@ -243,13 +301,29 @@ export function BookingWizard() {
                           : "border-line bg-surface hover:border-primary/60"
                       }`}
                     >
+                      {/*
+                        Cuadrado y no redondo: ahora se puede marcar más de uno,
+                        y un círculo promete justo lo contrario.
+                      */}
                       <span
                         aria-hidden="true"
-                        className={`mt-1 grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 ${
-                          selected ? "border-primary" : "border-line"
+                        className={`mt-1 grid h-5 w-5 shrink-0 place-items-center border-2 ${
+                          selected ? "border-primary bg-primary" : "border-line"
                         }`}
                       >
-                        {selected && <span className="h-2.5 w-2.5 rounded-full bg-primary" />}
+                        {selected && (
+                          <svg
+                            viewBox="0 0 16 16"
+                            className="h-3.5 w-3.5 text-white"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M3 8.5 6.5 12 13 4.5" />
+                          </svg>
+                        )}
                       </span>
 
                       <span className="min-w-0 flex-1">
@@ -280,33 +354,33 @@ export function BookingWizard() {
               })}
             </ul>
 
-            {serviceId && availableAddOns.length > 0 && (
+            {grupos.length > 0 && (
               <fieldset className="mt-6 border border-line bg-surface p-4">
                 <legend className="eyebrow px-1">¿Necesitas algún extra?</legend>
-                <ul className="mt-2 space-y-2">
-                  {availableAddOns.map((addOn) => (
-                    <li key={addOn.id}>
-                      <label className="flex cursor-pointer items-center gap-3 text-[14px]">
-                        <input
-                          type="checkbox"
-                          checked={addOnIds.includes(addOn.id)}
-                          onChange={(e) =>
-                            setAddOnIds((prev) =>
-                              e.target.checked
-                                ? [...prev, addOn.id]
-                                : prev.filter((id) => id !== addOn.id),
-                            )
-                          }
-                          className="h-4 w-4 accent-[var(--c-primary)]"
+                {grupos.map((grupo) => (
+                  <div key={grupo.categoryId} className="mt-2">
+                    {/*
+                      El título solo cuando hay más de un grupo: en una cita de
+                      manos y pies se repiten "Francesa" y "Piedras", y sin
+                      saber de cuál es cada una no se puede elegir bien.
+                    */}
+                    {grupos.length > 1 && (
+                      <p className="mt-3 text-[12px] font-semibold uppercase tracking-[0.12em] text-muted">
+                        {grupo.categoryName}
+                      </p>
+                    )}
+                    <ul className="divide-y divide-line">
+                      {grupo.addOns.map((addOn) => (
+                        <ExtraFila
+                          key={addOn.id}
+                          addOn={addOn}
+                          units={unidadesDe(addOn.id)}
+                          onChange={(n) => ponerUnidades(addOn.id, n)}
                         />
-                        <span className="flex-1 text-ink">{addOn.name}</span>
-                        <span className="font-semibold text-ink">
-                          + {formatCents(Math.round(addOn.price * 100))}
-                        </span>
-                      </label>
-                    </li>
-                  ))}
-                </ul>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
               </fieldset>
             )}
           </div>
@@ -470,9 +544,17 @@ export function BookingWizard() {
             <h2 className="text-[26px]">Repasa y confirma</h2>
 
             <dl className="mt-6 divide-y divide-line border border-line bg-surface px-5">
-              <Row label="Servicio" value={current.service.name} />
+              <Row
+                label={current.services.length > 1 ? "Servicios" : "Servicio"}
+                value={current.services.map((s) => s.name).join(" + ")}
+              />
               {current.addOns.length > 0 && (
-                <Row label="Extras" value={current.addOns.map((a) => a.name).join(", ")} />
+                <Row
+                  label="Extras"
+                  value={current.addOns
+                    .map((a) => (a.units > 1 ? `${a.name} ×${a.units}` : a.name))
+                    .join(", ")}
+                />
               )}
               <Row label="Día" value={formatDateLong(date)} />
               <Row
@@ -606,22 +688,33 @@ export function BookingWizard() {
           ) : (
             <>
               <p className="mt-2 font-display text-[19px] leading-snug text-ink">
-                {current.service.name}
+                {current.services.map((s) => s.name).join(" + ")}
               </p>
-              <p className="text-[13px] text-muted">{current.service.categoryName}</p>
+              <p className="text-[13px] text-muted">
+                {[...new Set(current.services.map((s) => s.categoryName))].join(" y ")}
+              </p>
 
+              {/*
+                Una línea por servicio y por extra. Con varias cosas en la misma
+                cita, un único importe no deja comprobar de dónde sale el total.
+              */}
               <ul className="mt-4 space-y-1.5 border-t border-line pt-4 text-[14px]">
-                <li className="flex justify-between gap-3">
-                  <span className="text-muted">Servicio</span>
-                  <span className="text-ink">
-                    {formatCents(Math.round(current.service.price * 100))}
-                  </span>
-                </li>
+                {current.services.map((service) => (
+                  <li key={service.id} className="flex justify-between gap-3">
+                    <span className="text-muted">{service.name}</span>
+                    <span className="whitespace-nowrap text-ink">
+                      {formatCents(Math.round(service.price * 100))}
+                    </span>
+                  </li>
+                ))}
                 {current.addOns.map((addOn) => (
                   <li key={addOn.id} className="flex justify-between gap-3">
-                    <span className="text-muted">{addOn.name}</span>
-                    <span className="text-ink">
-                      + {formatCents(Math.round(addOn.price * 100))}
+                    <span className="text-muted">
+                      {addOn.name}
+                      {addOn.units > 1 && ` ×${addOn.units}`}
+                    </span>
+                    <span className="whitespace-nowrap text-ink">
+                      + {formatCents(addOn.lineCents)}
                     </span>
                   </li>
                 ))}
@@ -699,6 +792,112 @@ export function BookingWizard() {
 function todayISO(): string {
   // El servidor decide qué días son válidos; esto solo sitúa el calendario.
   return new Date().toLocaleDateString("en-CA", { timeZone: business.timezone });
+}
+
+/*
+ * Un extra de la lista.
+ *
+ * Hay dos clases y se comportan distinto porque se cobran distinto. La francesa
+ * se pone o no se pone. Las piedras van a euro la uña, así que la pregunta no
+ * es «¿quieres?» sino «¿en cuántas?»: se elige la cantidad y el precio se
+ * multiplica delante de ella. Enseñar «+ 1 €» en una clienta que quiere las
+ * diez uñas sería anunciarle un precio que no es el suyo.
+ */
+function ExtraFila({
+  addOn,
+  units,
+  onChange,
+}: {
+  addOn: AddOn;
+  units: number;
+  onChange: (units: number) => void;
+}) {
+  const elegido = units > 0;
+  const tope = maxUnidades(addOn);
+  const unidadCents = Math.round(addOn.price * 100);
+
+  if (!addOn.perUnit) {
+    return (
+      <li>
+        <label className="flex cursor-pointer items-center gap-3 py-2.5 text-[14px]">
+          <input
+            type="checkbox"
+            checked={elegido}
+            onChange={(e) => onChange(e.target.checked ? 1 : 0)}
+            className="h-4 w-4 accent-[var(--c-primary)]"
+          />
+          <span className="flex-1 text-ink">{addOn.name}</span>
+          <span className="font-semibold text-ink">+ {formatCents(unidadCents)}</span>
+        </label>
+      </li>
+    );
+  }
+
+  const { singular, plural } = addOn.perUnit;
+
+  return (
+    <li className="py-2.5">
+      <div className="flex items-center gap-3 text-[14px]">
+        <input
+          id={`extra-${addOn.id}`}
+          type="checkbox"
+          checked={elegido}
+          /* Al marcarlo se empieza por todas: es lo que pide casi todo el mundo. */
+          onChange={(e) => onChange(e.target.checked ? tope : 0)}
+          className="h-4 w-4 accent-[var(--c-primary)]"
+        />
+        <label htmlFor={`extra-${addOn.id}`} className="flex-1 cursor-pointer text-ink">
+          {addOn.name}
+          <span className="block text-[12.5px] text-muted">
+            {formatCents(unidadCents)} por {singular}
+          </span>
+        </label>
+
+        {elegido ? (
+          <span className="font-semibold text-ink">+ {formatCents(unidadCents * units)}</span>
+        ) : (
+          <span className="text-[13px] text-muted">
+            hasta {formatCents(unidadCents * tope)}
+          </span>
+        )}
+      </div>
+
+      {elegido && (
+        <div className="mt-2 flex items-center gap-3 pl-7">
+          <div className="flex items-center border border-line">
+            <button
+              type="button"
+              className="px-3 py-1 text-[16px] leading-none text-muted transition-colors hover:text-ink disabled:opacity-40"
+              disabled={units <= 1}
+              onClick={() => onChange(units - 1)}
+              aria-label={`Una ${singular} menos`}
+            >
+              −
+            </button>
+            <span
+              className="min-w-[2.5rem] px-1 text-center text-[14px] font-semibold text-ink"
+              aria-live="polite"
+            >
+              {units}
+            </span>
+            <button
+              type="button"
+              className="px-3 py-1 text-[16px] leading-none text-muted transition-colors hover:text-ink disabled:opacity-40"
+              disabled={units >= tope}
+              onClick={() => onChange(units + 1)}
+              aria-label={`Una ${singular} más`}
+            >
+              +
+            </button>
+          </div>
+          <span className="text-[13px] text-muted">
+            {units === 1 ? singular : plural}
+            {units >= tope && ` (todas)`}
+          </span>
+        </div>
+      )}
+    </li>
+  );
 }
 
 function addMinutesLabel(start: string, minutes: number): string {

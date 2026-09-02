@@ -36,9 +36,23 @@ export type ServiceCategory = {
 export type AddOn = {
   id: string;
   name: string;
+  /** Precio en euros. Con `perUnit`, es el precio de UNA unidad. */
   price: number;
-  /** Minutos extra que suma a la cita */
+  /** Minutos extra que suma a la cita. Con `perUnit`, los de UNA unidad. */
   durationMin: number;
+  /**
+   * Para lo que se cobra por pieza y no por cita: las piedras van a 1 € la
+   * uña, así que en diez uñas son 10 €, no 1 €. Cuando está puesto, la clienta
+   * elige cuántas y el precio y el tiempo se multiplican por esa cantidad.
+   */
+  perUnit?: {
+    /** "uña" */
+    singular: string;
+    /** "uñas" */
+    plural: string;
+    /** Cuántas como mucho: diez uñas tiene una mano. */
+    max: number;
+  };
 };
 
 /** Franja horaria de trabajo, formato "HH:MM" */

@@ -77,6 +77,25 @@ export function workingRanges(
   return hours[weekdayOf(date)] ?? [];
 }
 
+/**
+ * true si esta reserva se quedó a medias y ya no guarda el hueco.
+ *
+ * Una reserva sin terminar SÍ ocupa la hora mientras la clienta está metiendo
+ * la tarjeta: si no, dos personas podrían estar pagando la misma hora a la vez.
+ * Lo que no puede es ocuparla para siempre. Pasado el plazo, quien no terminó
+ * pierde el hueco y vuelve a ofrecerse.
+ *
+ * Ante una fecha ilegible se responde que NO ha caducado: dejar el hueco
+ * cogido de más es molesto, darlo por libre cuando quizá alguien está pagando
+ * es una cita duplicada.
+ */
+export function holdCaducado(b: BookingRow): boolean {
+  if (b.status !== "pending_payment") return false;
+  const creada = new Date(b.created_at).getTime();
+  if (Number.isNaN(creada)) return false;
+  return (Date.now() - creada) / 60_000 > siteConfig.booking.holdMinutes;
+}
+
 /** Intervalos ocupados de un día, en minutos desde medianoche. */
 function occupiedIntervals(
   date: string,
@@ -86,7 +105,7 @@ function occupiedIntervals(
   const { bufferMinutes } = siteConfig.booking;
 
   const fromBookings = bookings
-    .filter((b) => b.date === date)
+    .filter((b) => b.date === date && !holdCaducado(b))
     .map((b) => ({
       start: toMinutes(b.start_time),
       // La cita reserva también los minutos de limpieza posteriores.
@@ -245,6 +264,34 @@ export async function isSlotBookable(
     return { ok: false, reason: "La duración del servicio no encaja en ese hueco." };
   }
   return { ok: true };
+}
+
+/**
+ * ¿Se ha metido otra clienta en esta hora mientras esta terminaba de pagar?
+ *
+ * Mira solapes y nada más: ni antelación mínima ni máximo diario. Se usa justo
+ * antes de confirmar una reserva que ya estaba hecha, y ahí esas reglas no
+ * pintan nada —la cita se hizo cuando se cumplían— mientras que meter dos
+ * clientas a la misma hora sí sería un desastre.
+ *
+ * Hace falta porque el hueco se suelta a los holdMinutes pero la pantalla de
+ * Stripe sigue viva hasta 30 minutos: alguien que la abandone y vuelva tarde
+ * podría confirmar sobre una hora que ya es de otra.
+ */
+export async function chocaConOtraCita(booking: BookingRow): Promise<boolean> {
+  const [delDia, blocks] = await Promise.all([
+    bookingsBetween(booking.date, booking.date),
+    blocksBetween(booking.date, booking.date),
+  ]);
+
+  const otras = delDia.filter((b) => b.code !== booking.code);
+  const ocupado = occupiedIntervals(booking.date, otras, blocks);
+  const suya: Interval = {
+    start: toMinutes(booking.start_time),
+    end: toMinutes(booking.end_time) + siteConfig.booking.bufferMinutes,
+  };
+
+  return ocupado.some((o) => overlaps(suya, o));
 }
 
 /** Primeros N días con al menos un hueco libre, para sugerir fechas. */

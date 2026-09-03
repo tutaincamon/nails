@@ -24,6 +24,17 @@ const DB_PATH = path.join(DATA_DIR, "studio.db");
 export type BookingStatus = "pending_payment" | "confirmed" | "cancelled" | "completed";
 export type DepositStatus = "none" | "pending" | "paid" | "on_site";
 
+/*
+ * Quién canceló la cita. Importa porque decide si se le puede cobrar: una cita
+ * que canceló la profesional no se cobra nunca, por tarde que sea.
+ *
+ * La cadena vacía es "no consta": citas que nadie canceló (un plantón, sin ir
+ * más lejos) y las que se cancelaron antes de que existiera esta columna. No
+ * se trata como "la canceló ella" a propósito, porque entonces ningún plantón
+ * sería cobrable.
+ */
+export type CancelledBy = "" | "client" | "admin";
+
 export type BookingRow = {
   code: string;
   created_at: string;
@@ -65,6 +76,7 @@ export type BookingRow = {
   manage_token: string;
   reminder_sent_at: string | null;
   cancelled_at: string | null;
+  cancelled_by: CancelledBy;
 
   /* --- Tarjeta guardada para cobrar plantones -------------------------- */
   /*
@@ -274,6 +286,7 @@ const SCHEMA = `
     manage_token     TEXT NOT NULL,
     reminder_sent_at TEXT,
     cancelled_at     TEXT,
+    cancelled_by     TEXT NOT NULL DEFAULT '',
     stripe_customer_id  TEXT NOT NULL DEFAULT '',
     card_payment_method TEXT NOT NULL DEFAULT '',
     card_label          TEXT NOT NULL DEFAULT '',
@@ -361,6 +374,7 @@ const ADDED_COLUMNS: { table: string; column: string; ddl: string }[] = [
   { table: "bookings", column: "price_note", ddl: "TEXT NOT NULL DEFAULT ''" },
   { table: "bookings", column: "price_updated_at", ddl: "TEXT" },
   { table: "bookings", column: "services_json", ddl: "TEXT NOT NULL DEFAULT '[]'" },
+  { table: "bookings", column: "cancelled_by", ddl: "TEXT NOT NULL DEFAULT ''" },
 ];
 
 async function migrate(instance: Driver) {
@@ -429,6 +443,7 @@ export async function insertBooking(
     BookingRow,
     | "reminder_sent_at"
     | "cancelled_at"
+    | "cancelled_by"
     | "stripe_customer_id"
     | "card_payment_method"
     | "card_label"
@@ -515,12 +530,21 @@ export async function updateBookingDetails(
   );
 }
 
-export async function updateBookingStatus(code: string, status: BookingStatus): Promise<void> {
+/*
+ * Cambiar el estado de una cita. Al cancelar hay que decir quién lo hizo, y no
+ * es un dato administrativo: de ahí depende si luego se le puede cobrar.
+ */
+export async function updateBookingStatus(
+  code: string,
+  status: BookingStatus,
+  cancelledBy: CancelledBy = "",
+): Promise<void> {
   const db = await driver();
-  const cancelledAt = status === "cancelled" ? new Date().toISOString() : null;
-  await db.run("UPDATE bookings SET status = ?, cancelled_at = ? WHERE code = ?", [
+  const cancelando = status === "cancelled";
+  await db.run("UPDATE bookings SET status = ?, cancelled_at = ?, cancelled_by = ? WHERE code = ?", [
     status,
-    cancelledAt,
+    cancelando ? new Date().toISOString() : null,
+    cancelando ? cancelledBy : "",
     code,
   ]);
 }

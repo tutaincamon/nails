@@ -86,6 +86,18 @@ export async function createCheckout(booking: BookingRow): Promise<CheckoutResul
           ...comun,
           mode: "setup",
           currency: siteConfig.business.currency.toLowerCase(),
+          /*
+           * Sin esto la tarjeta se queda sin dueño y no sirve para nada.
+           *
+           * customer_creation va por defecto en "if_required", y en modo setup
+           * Stripe no requiere cliente: la sesión terminaba con customer a
+           * null, y al no haber cliente no se podía guardar la tarjeta ni
+           * cobrar nada después. Es decir, se le pedía la tarjeta a la clienta,
+           * ella la autorizaba con su banco, y el panel seguía diciendo "sin
+           * tarjeta guardada". La política de plantones no existía en la
+           * práctica.
+           */
+          customer_creation: "always",
         });
 
     if (!session.url) return { mode: "error", error: "Stripe no devolvió una URL." };

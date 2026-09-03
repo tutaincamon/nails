@@ -42,8 +42,14 @@ export default async function BookingPage({ params, searchParams }: Props) {
     );
   }
 
-  // Vuelta de Stripe: se verifica el pago contra Stripe, no por la URL.
-  if (sessionId && booking.deposit_status !== "paid") {
+  /*
+   * Vuelta de Stripe: se verifica el pago contra Stripe, no por la URL.
+   *
+   * Se mira el estado de la cita y no deposit_status porque sin señal esa
+   * columna nunca cambia: si el webhook ya confirmó la reserva, preguntar otra
+   * vez a Stripe en cada recarga de esta página no aporta nada.
+   */
+  if (sessionId && booking.status === "pending_payment") {
     const verified = await verifyStripeSession(sessionId, code);
     if (verified.paid) {
       await confirmDeposit(code, verified.ref!, verified.card);

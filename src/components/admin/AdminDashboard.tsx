@@ -275,7 +275,14 @@ function BookingCard({ booking }: { booking: BookingRow }) {
     (new Date(`${booking.date}T${booking.start_time}`).getTime() - Date.now()) / 3_600_000;
   const canceladaTarde =
     booking.status === "cancelled" && horasParaLaCita < siteConfig.booking.cancellationHours;
-  const sePuedeCobrar = isPast || canceladaTarde;
+  /*
+   * Una cita que canceló ella no se cobra nunca, aunque fuera con dos horas de
+   * margen. Antes no se distinguía de una cancelación tardía de la clienta, y
+   * el panel le ofrecía cobrarle el servicio entero a alguien que no había
+   * hecho nada; al pasar el día, encima, lo volvía a ofrecer como plantón.
+   */
+  const canceladaPorElla = booking.cancelled_by === "admin";
+  const sePuedeCobrar = !canceladaPorElla && (isPast || canceladaTarde);
 
   async function chargeNoShow() {
     const percent = siteConfig.noShow.chargePercent;

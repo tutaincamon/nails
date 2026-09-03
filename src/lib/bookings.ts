@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import siteConfig from "@config";
-import { isSlotBookable } from "@/lib/availability";
+import { chocaConOtraCita, isSlotBookable } from "@/lib/availability";
 import { nombreDe, quote, type AddOnPick } from "@/lib/catalog";
 import {
   addDays,
@@ -233,9 +233,55 @@ export async function notifyConfirmed(booking: BookingRow) {
 export async function confirmDeposit(code: string, paymentRef: string, card?: SavedCard) {
   const before = await getBooking(code);
   if (!before) return { ok: false as const, error: "Reserva no encontrada." };
-  if (before.deposit_status === "paid") {
-    // Idempotente: Stripe puede reintentar el webhook y no queremos duplicar emails.
+  /*
+   * Idempotente. Esto llega por dos caminos a la vez —el webhook y la vuelta
+   * del navegador— y Stripe además reintenta el webhook si algo falla.
+   *
+   * La marca de "ya está hecho" no puede ser siempre deposit_status: sin señal
+   * esa columna se queda en "on_site" para siempre, así que la reserva se
+   * confirmaría otra vez por cada camino y por cada recarga de la página, y la
+   * clienta recibiría un email de confirmación por cada una. Sin señal la marca
+   * buena es el estado de la cita, que deja de ser pending_payment en cuanto la
+   * tarjeta queda registrada.
+   *
+   * Una cita cancelada tampoco se resucita: si el webhook llega tarde, se
+   * queda como está.
+   */
+  const yaHecho =
+    before.status === "cancelled" ||
+    (before.deposit_cents > 0
+      ? before.deposit_status === "paid"
+      : before.status !== "pending_payment");
+  if (yaHecho) {
     return { ok: true as const, booking: before, alreadyPaid: true };
+  }
+
+  /*
+   * ¿Sigue siendo suya la hora?
+   *
+   * El hueco se suelta a los holdMinutes, pero la pantalla de Stripe aguanta
+   * hasta media hora: quien la abandona y vuelve tarde podría confirmar sobre
+   * una hora que ya cogió otra clienta. Dos personas citadas a la vez, y en un
+   * negocio a domicilio eso significa dejar a una plantada.
+   *
+   * Como no se le ha cobrado nada —la tarjeta solo queda registrada—, lo
+   * honesto es cancelar y avisarla, no confirmarle una cita imposible.
+   */
+  if (await chocaConOtraCita(before)) {
+    await updateBookingStatus(code, "cancelled");
+    const cancelada = (await getBooking(code))!;
+    await sendAll([
+      {
+        to: cancelada.client_email,
+        kind: "cancellation_client",
+        bookingCode: code,
+        ...cancellationNotice(cancelada, false),
+      },
+    ]);
+    return {
+      ok: false as const,
+      error: "Esa hora la ha cogido otra clienta mientras terminabas. No se te ha cobrado nada.",
+    };
   }
 
   /*
@@ -295,7 +341,7 @@ export async function cancelBooking(code: string, token: string) {
 
   const tarde = remaining < siteConfig.booking.cancellationHours;
 
-  await updateBookingStatus(code, "cancelled");
+  await updateBookingStatus(code, "cancelled", "client");
   const cancelled = (await getBooking(code))!;
 
   await sendAll([

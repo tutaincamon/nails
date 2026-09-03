@@ -45,6 +45,18 @@ export async function POST(request: NextRequest) {
    * Lo que no se puede es cobrar una cita futura que sigue en pie: hasta la
    * hora, la clienta todavía puede aparecer.
    */
+  /*
+   * Si la canceló ella, no hay nada que cobrar. Y el corte tiene que estar
+   * aquí y no solo en el panel: en cuanto pasara la fecha, esta misma cita
+   * volvería a parecer un plantón normal y el botón reaparecería.
+   */
+  if (booking.cancelled_by === "admin") {
+    return NextResponse.json(
+      { ok: false, error: "Esta cita la cancelaste tú, así que no se le puede cobrar nada." },
+      { status: 400 },
+    );
+  }
+
   const quedan = hoursUntil(booking.date, booking.start_time);
   const yaPaso = quedan <= 0;
   const canceladaTarde = booking.status === "cancelled" && quedan < siteConfig.booking.cancellationHours;

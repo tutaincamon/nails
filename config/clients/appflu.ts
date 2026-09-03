@@ -200,6 +200,15 @@ export const appflu = {
     cancellationHours: 24,
     /** Máximo de citas por día (0 = sin límite) */
     maxPerDay: 0,
+    /*
+     * Minutos que se le guarda el hueco a quien está a medio reservar.
+     *
+     * Mientras mete la tarjeta, la hora es suya y nadie más la ve libre. Si
+     * abandona la pantalla, pasado este rato el hueco vuelve a ofrecerse: antes
+     * se quedaba cogido para siempre y bastaba con empezar una reserva y
+     * cerrar el navegador para dejar una hora muerta en la agenda.
+     */
+    holdMinutes: 10,
   },
 
   /* ---------------------------------------------------------------------- */

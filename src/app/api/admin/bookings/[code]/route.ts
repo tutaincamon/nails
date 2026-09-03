@@ -43,7 +43,12 @@ export async function PATCH(
   }
   if (booking.status === status) return NextResponse.json({ ok: true, unchanged: true });
 
-  await updateBookingStatus(code, status);
+  /*
+   * Queda constancia de que canceló ella. Una cita que cancela la profesional
+   * no se le cobra a la clienta por tarde que sea, y sin este dato el panel no
+   * podía distinguirla de una cancelación tardía de la clienta.
+   */
+  await updateBookingStatus(code, status, "admin");
 
   if (status === "cancelled") {
     const updated = (await getBooking(code))!;

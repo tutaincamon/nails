@@ -33,6 +33,9 @@ function citaPorDelante(b: BookingRow): boolean {
 function cargoSinResolver(b: BookingRow): boolean {
   if (!siteConfig.noShow.enabled) return false;
   if (b.no_show_cents > 0) return false; // ya se cobró: asunto cerrado
+  // La canceló la profesional: no hay ningún cargo posible, así que tampoco
+  // hay motivo para retenerle la tarjeta a la clienta.
+  if (b.cancelled_by === "admin") return false;
 
   const horas = hoursUntil(b.date, b.start_time);
   if (horas >= 0) return false; // todavía no ha llegado

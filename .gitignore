@@ -24,3 +24,9 @@ next-env.d.ts
 
 # Herramienta de captación: método comercial propio, no parte del producto.
 outreach/
+
+# Lo añadió el CLI de Vercel al descargar las variables de producción.
+# La excepción hace falta: .env.example no lleva ningún secreto, es la plantilla
+# que explica qué variables necesita el proyecto, y sí va al repositorio.
+.env*
+!.env.example

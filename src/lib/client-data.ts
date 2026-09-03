@@ -1,4 +1,5 @@
 import siteConfig from "@config";
+import { holdCaducado } from "@/lib/availability";
 import { bookingsForEmail, type BookingRow } from "@/lib/db";
 import { hoursUntil } from "@/lib/time";
 
@@ -27,6 +28,13 @@ export type Bloqueo =
   | { puede: false; motivo: "cita-pendiente" | "cargo-pendiente"; cuando?: string };
 
 function citaPorDelante(b: BookingRow): boolean {
+  /*
+   * Una reserva que se quedó a medias y ya perdió el hueco no es una cita: no
+   * ocupa nada en la agenda, así que tampoco puede retenerle la tarjeta a
+   * nadie. Sin esto, empezar una reserva y cerrar el navegador dejaba a la
+   * clienta sin poder quitar su tarjeta hasta que pasara la fecha.
+   */
+  if (holdCaducado(b)) return false;
   return b.status !== "cancelled" && hoursUntil(b.date, b.start_time) >= 0;
 }
 

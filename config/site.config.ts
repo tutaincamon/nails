@@ -1,6 +1,6 @@
 import { appflu } from "./clients/appflu";
 
-export type { Service, ServiceCategory, AddOn, TimeRange } from "./clients/appflu";
+export type { Service, ServiceCategory, AddOn, TimeRange, Zone } from "./clients/appflu";
 import { isis } from "./clients/isis";
 import { luamiz } from "./clients/luamiz";
 

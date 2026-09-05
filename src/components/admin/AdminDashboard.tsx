@@ -383,6 +383,12 @@ function BookingCard({ booking }: { booking: BookingRow }) {
       {siteConfig.venue.needsClientAddress && booking.client_address && (
         <p className="mt-2 border-l-2 border-accent bg-bg px-3 py-2 text-[13px] leading-relaxed text-ink">
           <span className="font-semibold">Dirección:</span> {booking.client_address}
+          {booking.zone_name && (
+            <span className="text-muted">
+              {" "}
+              · {booking.zone_name} ({formatCents(booking.zone_cents)} de desplazamiento)
+            </span>
+          )}
         </p>
       )}
 

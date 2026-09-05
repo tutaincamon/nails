@@ -93,6 +93,18 @@ function detailsTable(booking: BookingRow): string {
       ? row("Dirección", escapeHtml(booking.client_address).replace(/\n/g, "<br>"))
       : "";
 
+  /*
+   * El desplazamiento va desglosado y no escondido dentro del total: es un
+   * importe que la clienta no esperaba al mirar la tarifa de servicios, y
+   * verlo con su nombre evita la conversación de "¿por qué son 5 € más?".
+   */
+  const zona = booking.zone_name
+    ? row(
+        "Desplazamiento",
+        `${escapeHtml(booking.zone_name)} · ${formatCents(booking.zone_cents)}`,
+      )
+    : "";
+
   return `
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
     ${row("Servicio", escapeHtml(booking.service_name))}
@@ -100,6 +112,7 @@ function detailsTable(booking: BookingRow): string {
     ${row("Día", `${escapeHtml(formatDateLong(booking.date))}`)}
     ${row("Hora", `${escapeHtml(booking.start_time)} – ${escapeHtml(booking.end_time)} <span style="font-weight:400;color:${theme.muted};">(${formatDuration(booking.duration_min)})</span>`)}
     ${address}
+    ${zona}
     ${row("Precio", priceLabel)}
     ${row("Código de reserva", `<code style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:${theme.bg};padding:2px 6px;border-radius:4px;">${escapeHtml(booking.code)}</code>`)}
   </table>`;

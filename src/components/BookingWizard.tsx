@@ -46,7 +46,7 @@ export function BookingWizard() {
     deposit.enabled ? "deposit" : "on_site",
   );
 
-  const [form, setForm] = useState({ name: "", email: "", phone: "", address: "", notes: "" });
+  const [form, setForm] = useState({ name: "", email: "", phone: "", address: "", zone: "", notes: "" });
   /*
    * Pase firmado que acredita que el email quedó verificado con el código.
    * Mientras sea null, el paso de datos enseña la pantalla de verificación.
@@ -66,7 +66,7 @@ export function BookingWizard() {
     olvidarRecuerdoLocal();
     setPase(null);
     setRecordada(false);
-    setForm({ name: "", email: "", phone: "", address: "", notes: "" });
+    setForm({ name: "", email: "", phone: "", address: "", zone: "", notes: "" });
   }
 
   const [accepted, setAccepted] = useState(false);
@@ -99,6 +99,20 @@ export function BookingWizard() {
   );
   const category = siteConfig.categories.find((c) => c.id === categoryId)!;
   const grupos = gruposDeExtras(serviceIds);
+
+  /*
+   * Desplazamiento. No es un extra del servicio: depende de dónde viva la
+   * clienta, así que se suma aparte y se enseña como una línea más para que el
+   * total no aparezca inflado sin explicación.
+   *
+   * Esto es solo lo que ella VE. El importe que se cobra lo vuelve a calcular
+   * el servidor a partir del identificador de la zona.
+   */
+  const zonas = siteConfig.venue.zones;
+  const zonaElegida = zonas.find((z) => z.id === form.zone) ?? null;
+  const zonaCents = zonaElegida ? Math.round(zonaElegida.price * 100) : 0;
+  const totalConZona = (current?.totalCents ?? 0) + zonaCents;
+  const precioAbierto = Boolean(current?.isFrom) || Boolean(zonaElegida?.from);
 
   /** Marca o desmarca un servicio sin tocar los demás. */
   function alternarServicio(id: string) {
@@ -193,6 +207,7 @@ export function BookingWizard() {
           email: form.email,
           phone: form.phone,
           address: form.address,
+          zone: form.zone,
           notes: form.notes,
           payment,
           pase,
@@ -229,7 +244,16 @@ export function BookingWizard() {
   const canContinue: Record<Step, boolean> = {
     0: serviceIds.length > 0,
     1: Boolean(date && time),
-    2: Boolean(pase) && form.name.trim().length >= 2 && form.phone.trim().length >= 9,
+    /*
+     * La zona bloquea el paso igual que el nombre o el teléfono. El servidor
+     * la exige de todas formas, pero enterarse al pulsar "Confirmar", con todo
+     * ya rellenado, es la peor forma de descubrir que falta un campo.
+     */
+    2:
+      Boolean(pase) &&
+      form.name.trim().length >= 2 &&
+      form.phone.trim().length >= 9 &&
+      (zonas.length === 0 || Boolean(zonaElegida)),
     3: accepted && !submitting,
   };
 
@@ -520,6 +544,94 @@ export function BookingWizard() {
                 </div>
               )}
 
+              {/*
+                Zona de desplazamiento. Obligatoria cuando hay zonas: no se
+                puede deducir de la dirección escrita a mano, y sin ella no se
+                sabe lo que cuesta llegar.
+              */}
+              {zonas.length > 0 && (
+                <div className="sm:col-span-2">
+                  <p className="label">{siteConfig.venue.zonesLabel}</p>
+
+                  {siteConfig.venue.zonesImage && (
+                    <a
+                      href={siteConfig.venue.zonesImage}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-2 block border border-line bg-surface p-1"
+                    >
+                      {/*
+                        Sin next/image a propósito: es un mapa que se mira de
+                        cerca, y aquí interesa que se pueda abrir a tamaño
+                        completo más que ahorrar unos kilobytes.
+
+                        Y sin loading="lazy": el mapa es lo que hace falta para
+                        contestar la pregunta que tiene justo debajo, así que
+                        llegar y encontrarse un hueco en blanco no sirve.
+                      */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={siteConfig.venue.zonesImage}
+                        alt="Mapa de las zonas de desplazamiento"
+                        /* El original es vertical y a lo ancho se comía la pantalla. */
+                        className="mx-auto max-h-[380px] w-auto max-w-full"
+                      />
+                    </a>
+                  )}
+
+                  <ul
+                    className={`mt-2 divide-y divide-line border bg-surface ${
+                      errorField === "zone" ? "border-red-400" : "border-line"
+                    }`}
+                  >
+                    {zonas.map((zona) => {
+                      const elegida = form.zone === zona.id;
+                      return (
+                        <li key={zona.id}>
+                          <button
+                            type="button"
+                            onClick={() => setForm({ ...form, zone: zona.id })}
+                            aria-pressed={elegida}
+                            className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors ${
+                              elegida ? "bg-primary/5" : "hover:bg-bg"
+                            }`}
+                          >
+                            <span className="flex items-center gap-2.5">
+                              <span
+                                aria-hidden
+                                className={`inline-block h-4 w-4 shrink-0 rounded-full border ${
+                                  elegida ? "border-[5px] border-primary" : "border-line"
+                                }`}
+                              />
+                              <span>
+                                <span
+                                  className={`block text-[14.5px] ${elegida ? "font-semibold text-ink" : "text-ink"}`}
+                                >
+                                  {zona.name}
+                                </span>
+                                {zona.note && (
+                                  <span className="block text-[12.5px] text-muted">{zona.note}</span>
+                                )}
+                              </span>
+                            </span>
+                            <span className="shrink-0 whitespace-nowrap text-[14.5px] font-semibold text-ink">
+                              {zona.from && (
+                                <span className="font-normal text-muted">desde </span>
+                              )}
+                              + {formatCents(Math.round(zona.price * 100))}
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+
+                  <p className="mt-1.5 text-[12.5px] leading-relaxed text-muted">
+                    {siteConfig.venue.zonesHint}
+                  </p>
+                </div>
+              )}
+
               <div className="sm:col-span-2">
                 <label className="label" htmlFor="notes">
                   ¿Algo que deba saber? <span className="font-normal text-muted">(opcional)</span>
@@ -566,6 +678,12 @@ export function BookingWizard() {
               <Row label="Teléfono" value={form.phone} />
               {form.address.trim() && (
                 <Row label={siteConfig.venue.addressLabel} value={form.address.trim()} />
+              )}
+              {zonaElegida && (
+                <Row
+                  label="Desplazamiento"
+                  value={`${zonaElegida.name} · ${zonaElegida.from ? "desde " : "+ "}${formatCents(zonaCents)}`}
+                />
               )}
               {form.notes.trim() && <Row label="Nota" value={form.notes.trim()} />}
             </dl>
@@ -718,11 +836,19 @@ export function BookingWizard() {
                     </span>
                   </li>
                 ))}
+                {zonaElegida && (
+                  <li className="flex justify-between gap-3">
+                    <span className="text-muted">Desplazamiento · {zonaElegida.name}</span>
+                    <span className="whitespace-nowrap text-ink">
+                      + {formatCents(zonaCents)}
+                    </span>
+                  </li>
+                )}
                 <li className="flex justify-between gap-3 border-t border-line pt-2.5 font-semibold">
                   <span className="text-ink">Total</span>
                   <span className="text-ink">
-                    {current.isFrom && <span className="font-normal text-muted">desde </span>}
-                    {formatCents(current.totalCents)}
+                    {precioAbierto && <span className="font-normal text-muted">desde </span>}
+                    {formatCents(totalConZona)}
                   </span>
                 </li>
               </ul>

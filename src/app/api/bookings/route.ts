@@ -16,6 +16,7 @@ type Payload = {
   phone?: unknown;
   pase?: unknown;
   address?: unknown;
+  zone?: unknown;
   notes?: unknown;
   payment?: unknown;
 };
@@ -94,6 +95,8 @@ export async function POST(request: NextRequest) {
     email: emailVerificado,
     phone: str(payload.phone),
     address: str(payload.address),
+    /* Solo el identificador: lo que cuesta esa zona lo decide el servidor. */
+    zone: str(payload.zone),
     notes: str(payload.notes),
     payment,
   });

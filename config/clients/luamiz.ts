@@ -1,4 +1,4 @@
-import { appflu } from "./appflu";
+import { appflu, type Zone } from "./appflu";
 
 /* ============================================================================
  *  LUAMIZ  —  Indira · manicura y pedicura a domicilio, desde Agüimes
@@ -89,6 +89,32 @@ export const luamiz = {
     addressLabel: "¿Dónde voy?",
     addressHint:
       "Calle, número, piso y población. Si hay algo que deba saber para llegar (portal sin timbre, zona de aparcamiento), dímelo también.",
+
+    /*
+     * Sale de Agüimes y atiende toda Gran Canaria, así que el desplazamiento no
+     * es igual para todo el mundo y hasta ahora no se cobraba: iba en el precio
+     * o se acordaba por WhatsApp. Con esto lo ve la clienta antes de reservar y
+     * ella deja de perder dinero en las citas lejanas.
+     *
+     * El Oeste va como "desde" porque de Agüimes a La Aldea no es lo mismo que
+     * a Mogán: ahí el importe se cierra hablando con ella.
+     */
+    zones: [
+      { id: "este", name: "Zona Este", price: 5 },
+      { id: "sur", name: "Zona Sur", price: 10 },
+      { id: "centro", name: "Zona Centro", price: 10 },
+      { id: "norte", name: "Zona Norte", price: 15 },
+      { id: "oeste", name: "Zona Oeste", price: 15, from: true },
+      /*
+       * La anotación no sobra: sin ella TypeScript deduce el tipo de estos
+       * literales concretos, y los campos opcionales que aquí no se usan
+       * (`note`) dejarían de existir para el resto del código.
+       */
+    ] as Zone[],
+    zonesLabel: "¿En qué zona estás?",
+    zonesImage: "/luamiz/lugar.jpg",
+    zonesHint:
+      "Salgo de Agüimes y el desplazamiento se suma al precio del servicio. Si no sabes cuál te toca, mira el mapa.",
   },
 
   /*

@@ -1,7 +1,14 @@
 import { randomBytes } from "node:crypto";
 import siteConfig from "@config";
 import { chocaConOtraCita, isSlotBookable } from "@/lib/availability";
-import { nombreDe, quote, type AddOnPick } from "@/lib/catalog";
+import {
+  hayZonas,
+  nombreDe,
+  quote,
+  resolveZone,
+  zoneCents,
+  type AddOnPick,
+} from "@/lib/catalog";
 import {
   addDays,
   endTime,
@@ -45,6 +52,8 @@ export type CreateBookingInput = {
   phone: string;
   /** Dónde vive la clienta. Obligatorio si es la profesional quien se desplaza. */
   address?: string;
+  /** Identificador de la zona de desplazamiento. Obligatorio si hay zonas. */
+  zone?: string;
   notes?: string;
   payment: PaymentChoice;
 };
@@ -98,6 +107,17 @@ function validateClient(input: CreateBookingInput): { error: string; field: stri
       field: "address",
     };
   }
+  /*
+   * La zona no se puede deducir de la dirección escrita a mano —"Las Palmas" y
+   * "las palmas de g.c." son la misma y ninguna es un identificador—, así que
+   * se pregunta aparte y se exige. Sin ella no se sabe cuánto cuesta llegar.
+   */
+  if (hayZonas() && !resolveZone(input.zone)) {
+    return {
+      error: "Elige la zona en la que estás para saber el desplazamiento.",
+      field: "zone",
+    };
+  }
   return null;
 }
 
@@ -115,6 +135,20 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
 
   const slotCheck = await isSlotBookable(input.date, input.time, q.durationMin);
   if (!slotCheck.ok) return { ok: false, error: slotCheck.reason, field: "time" };
+
+  /*
+   * El desplazamiento se suma al total de la cita, no va aparte.
+   *
+   * Podría llevarse en una columna suelta y sumarse solo al enseñarlo, pero
+   * entonces el plantón se cobraría sin él: quien no aparece le hace perder
+   * también el viaje, y a domicilio ese viaje es media hora de coche. Yendo
+   * dentro del precio, todo lo que ya mira price_cents —el plantón, las
+   * estadísticas del mes, la señal— cuenta el desplazamiento sin tocar nada.
+   *
+   * La duración NO la toca: el tiempo de carretera ya está en bufferMinutes.
+   */
+  const zona = resolveZone(input.zone);
+  const zonaCents = zoneCents(zona);
 
   const wantsDeposit =
     siteConfig.deposit.enabled && q.depositCents > 0 && input.payment === "deposit";
@@ -156,8 +190,9 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     addons_json: JSON.stringify(
       q.addOns.map((a) => ({ name: a.name, price: a.price, units: a.units })),
     ),
-    price_cents: q.totalCents,
-    price_from: q.isFrom ? 1 : 0,
+    price_cents: q.totalCents + zonaCents,
+    /* Una zona "desde" deja el total abierto igual que un servicio "desde". */
+    price_from: q.isFrom || Boolean(zona?.from) ? 1 : 0,
     duration_min: q.durationMin,
     date: input.date,
     start_time: input.time,
@@ -166,6 +201,9 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
     client_email: input.email.trim().toLowerCase(),
     client_phone: input.phone.trim(),
     client_address: (input.address ?? "").trim().slice(0, 300),
+    zone_id: zona?.id ?? "",
+    zone_name: zona?.name ?? "",
+    zone_cents: zonaCents,
     notes: (input.notes ?? "").trim().slice(0, 800),
     deposit_cents: wantsDeposit ? q.depositCents : 0,
     deposit_status: (wantsDeposit ? "pending" : "on_site") as BookingRow["deposit_status"],

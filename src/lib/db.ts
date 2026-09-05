@@ -69,6 +69,14 @@ export type BookingRow = {
   client_phone: string;
   /** Dónde vive la clienta. Solo se pide cuando la profesional va a su casa. */
   client_address: string;
+  /*
+   * Zona de desplazamiento elegida. Se guarda el nombre y el importe además
+   * del identificador: si mañana ella sube el precio del Norte, esta cita
+   * tiene que seguir contando por lo que se cobró el día que se reservó.
+   */
+  zone_id: string;
+  zone_name: string;
+  zone_cents: number;
   notes: string;
   deposit_cents: number;
   deposit_status: DepositStatus;
@@ -279,6 +287,9 @@ const SCHEMA = `
     client_email     TEXT NOT NULL,
     client_phone     TEXT NOT NULL,
     client_address   TEXT NOT NULL DEFAULT '',
+    zone_id          TEXT NOT NULL DEFAULT '',
+    zone_name        TEXT NOT NULL DEFAULT '',
+    zone_cents       INTEGER NOT NULL DEFAULT 0,
     notes            TEXT NOT NULL DEFAULT '',
     deposit_cents    INTEGER NOT NULL DEFAULT 0,
     deposit_status   TEXT NOT NULL DEFAULT 'none',
@@ -375,6 +386,9 @@ const ADDED_COLUMNS: { table: string; column: string; ddl: string }[] = [
   { table: "bookings", column: "price_updated_at", ddl: "TEXT" },
   { table: "bookings", column: "services_json", ddl: "TEXT NOT NULL DEFAULT '[]'" },
   { table: "bookings", column: "cancelled_by", ddl: "TEXT NOT NULL DEFAULT ''" },
+  { table: "bookings", column: "zone_id", ddl: "TEXT NOT NULL DEFAULT ''" },
+  { table: "bookings", column: "zone_name", ddl: "TEXT NOT NULL DEFAULT ''" },
+  { table: "bookings", column: "zone_cents", ddl: "INTEGER NOT NULL DEFAULT 0" },
 ];
 
 async function migrate(instance: Driver) {
@@ -460,9 +474,10 @@ export async function insertBooking(
     `INSERT INTO bookings (
       code, created_at, status, service_id, service_name, category_name, services_json, addons_json,
       price_cents, price_from, duration_min, date, start_time, end_time,
-      client_name, client_email, client_phone, client_address, notes,
+      client_name, client_email, client_phone, client_address,
+      zone_id, zone_name, zone_cents, notes,
       deposit_cents, deposit_status, payment_ref, manage_token
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [
       row.code,
       row.created_at,
@@ -482,6 +497,9 @@ export async function insertBooking(
       row.client_email,
       row.client_phone,
       row.client_address,
+      row.zone_id,
+      row.zone_name,
+      row.zone_cents,
       row.notes,
       row.deposit_cents,
       row.deposit_status,

@@ -1,4 +1,9 @@
-import siteConfig, { type AddOn, type Service, type ServiceCategory } from "@config";
+import siteConfig, {
+  type AddOn,
+  type Service,
+  type ServiceCategory,
+  type Zone,
+} from "@config";
 
 export type ResolvedService = Service & { categoryId: string; categoryName: string };
 
@@ -176,4 +181,30 @@ export function picksFromParam(raw: string): AddOnPick[] {
       const [id, units] = trozo.split(":");
       return { id, units: Number(units) || 1 };
     });
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Zonas de desplazamiento                                                   */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * El desplazamiento se cobra aparte del servicio y depende de dónde viva la
+ * clienta. Igual que con los precios, el importe sale SIEMPRE de aquí: del
+ * navegador solo llega el identificador de la zona, nunca lo que cuesta.
+ */
+
+/** true cuando este negocio cobra desplazamiento por zonas. */
+export function hayZonas(): boolean {
+  return siteConfig.venue.zones.length > 0;
+}
+
+/** La zona con ese identificador, o null si no existe. */
+export function resolveZone(id: string | undefined | null): Zone | null {
+  if (!id) return null;
+  return siteConfig.venue.zones.find((z) => z.id === id) ?? null;
+}
+
+/** Lo que suma esa zona, en céntimos. Sin zona, cero. */
+export function zoneCents(zone: Zone | null): number {
+  return zone ? Math.round(zone.price * 100) : 0;
 }

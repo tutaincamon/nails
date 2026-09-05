@@ -55,6 +55,25 @@ export type AddOn = {
   };
 };
 
+/**
+ * Zona de desplazamiento, para quien trabaja a domicilio.
+ *
+ * El desplazamiento no es un extra del servicio: es lo que cuesta llegar, y
+ * depende de dónde viva la clienta, no de qué se haga en las uñas. Por eso va
+ * aparte y se pregunta junto con la dirección.
+ */
+export type Zone = {
+  id: string;
+  /** "Zona Norte" */
+  name: string;
+  /** Lo que suma esa zona, en euros. */
+  price: number;
+  /** true cuando el precio es un mínimo y puede subir según lo lejos que sea. */
+  from?: boolean;
+  /** Aclaración opcional bajo el nombre: los pueblos que entran, por ejemplo. */
+  note?: string;
+};
+
 /** Franja horaria de trabajo, formato "HH:MM" */
 export type TimeRange = { start: string; end: string };
 
@@ -153,6 +172,24 @@ export const appflu = {
     needsClientAddress: false,
     addressLabel: "¿Dónde voy?",
     addressHint: "Calle, número, piso y población.",
+
+    /*
+     * Zonas de desplazamiento y lo que cuesta llegar a cada una.
+     *
+     * Lista vacía: no se cobra desplazamiento y no se pregunta nada. Con zonas,
+     * elegir una es OBLIGATORIO y su precio se suma al total de la cita.
+     *
+     * Va aparte de los extras a propósito: un extra depende del servicio (más
+     * piedras, más largo), esto depende de dónde vive la clienta. Mezclarlos
+     * haría que "20 € de manicura" significara cosas distintas según el barrio.
+     */
+    zones: [] as Zone[],
+    /** Rótulo de la pregunta en el formulario. */
+    zonesLabel: "¿En qué zona estás?",
+    /** Imagen opcional del mapa de zonas, en /public. Vacío = no se enseña. */
+    zonesImage: "",
+    /** Texto bajo la pregunta. */
+    zonesHint: "El desplazamiento se suma al precio del servicio.",
   },
 
   /* ---------------------------------------------------------------------- */
